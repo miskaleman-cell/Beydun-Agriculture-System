@@ -2,7 +2,9 @@
 // Beydun Agriculture System — Service Worker
 // ══════════════════════════════════════════════
 
-const CACHE_NAME = 'beydun-agro-v2';
+// ⚠️ رقم الإصدار يُحدَّث تلقائياً من index.html عبر postMessage
+// لتغيير الإصدار يدوياً: غيّر APP_VERSION في index.html فقط
+let CACHE_NAME = 'beydun-agro-v28';
 
 // Local app shell + CDN assets to pre-cache for offline use
 const PRECACHE = [
@@ -80,7 +82,22 @@ self.addEventListener('fetch', e => {
   }
 });
 
-// Listen for messages from the main app (e.g. to force-activate an update)
+// Listen for messages from the main app
 self.addEventListener('message', e => {
-  if (e.data === 'skipWaiting') self.skipWaiting();
+  if (e.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
+  // رقم الإصدار يُرسَل من index.html عند التسجيل
+  // يُستخدم لتسمية الكاش تلقائياً دون تعديل يدوي في هذا الملف
+  if (e.data && e.data.type === 'SET_VERSION') {
+    const newCache = 'beydun-agro-v' + e.data.version;
+    if (newCache !== CACHE_NAME) {
+      const oldCache = CACHE_NAME;
+      CACHE_NAME = newCache;
+      // حذف الكاش القديم فوراً
+      caches.delete(oldCache).then(() => {
+        console.log('SW: cache updated to', CACHE_NAME);
+      });
+    }
+  }
 });
