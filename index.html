@@ -806,7 +806,10 @@ td{padding:8px 12px;vertical-align:middle}
   visibility: visible;
   opacity: 1;
   max-height: none;
-  overflow: visible;
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 #root .mob-nav-item.active{
   color: #fff;
@@ -1354,13 +1357,14 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
   -webkit-overflow-scrolling:touch;-ms-overflow-style:none}
 .mob-bottom-nav-inner::-webkit-scrollbar{display:none}
 .mob-nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:2px;padding:7px 10px;border:none;background:none;cursor:pointer;font-family:inherit;
-  font-size:9px;font-weight:700;color:var(--gy5);white-space:nowrap;flex:1;min-width:52px;
-  transition:color .2s;position:relative;-webkit-tap-highlight-color:transparent}
+  gap:2px;padding:7px 4px;border:none;background:none;cursor:pointer;font-family:inherit;
+  font-size:9px;font-weight:700;color:var(--gy5);flex:1;min-width:52px;max-width:84px;
+  overflow:hidden;transition:color .2s;position:relative;-webkit-tap-highlight-color:transparent}
 .mob-nav-item.active{color:var(--g8)}
 .mob-nav-item.active::before{content:'';position:absolute;top:0;left:25%;right:25%;
   height:3px;background:var(--g8);border-radius:0 0 4px 4px}
 .mob-nav-item .mob-ni{font-size:19px;line-height:1.2}
+.mob-nav-item>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mob-nav-badge{position:absolute;top:4px;right:8px;background:#ef4444;color:#fff;
   border-radius:8px;font-size:8px;font-weight:700;padding:1px 4px;min-width:14px;text-align:center}
 
@@ -1658,6 +1662,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     <button class="nav-btn" onclick="showPage('purchases')" id="nav-purchases" style="background:linear-gradient(135deg,#E8EAF6,#EDE7F6);border:1.5px solid #9FA8DA"><span class="ni">📦</span><span data-key="purchases">فواتير الشراء</span></button>
     <button class="nav-btn" onclick="showPage('products')" id="nav-products"><span class="ni">🧪</span><span data-key="products">إدارة المنتجات</span></button>
     <button class="nav-btn" onclick="openWarehouseManager()" id="nav-whmgr"><span class="ni">🏗️</span><span data-key="whmgr">إدارة المستودعات</span></button>
+    <button class="nav-btn" onclick="openFullBackupModal()" id="nav-backupdata"><span class="ni">💾</span><span data-key="navBackupData">النسخة الاحتياطية</span></button>
   </div>
 </nav>
 
@@ -1942,6 +1947,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
           <option value="Dükkan">Dükkan</option><option value="OĞUZELI">OĞUZELI</option>
           <option value="ARABAN">ARABAN</option><option value="NİZİP">NİZİP</option>
         </select>
+        <input type="text" id="sales-cust" oninput="renderSales()" placeholder="🔍 بحث عن زبون..." style="padding:6px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px;min-width:140px">
         <button class="btn bxl bsm" onclick="exportSalesExcel()">📥 Excel</button>
       </div>
     </div>
@@ -5757,6 +5763,10 @@ const TX={
     backupWeeklySub:'مرة واحدة في الأسبوع',backupOnClose:'☑️ نسخ احتياطي عند الإغلاق',
     backupOnCloseSub:'عند إغلاق المتصفح',backupTitle:'إعدادات النسخ الاحتياطي',
     saveFile:'💾 حفظ الملف',backup:'🔄 نسخ احتياطي',importBtn:'📥 استيراد',
+    navBackupData:'النسخة الاحتياطية',fbTitle:'النسخة الاحتياطية للبيانات',
+    fbExportDesc:'تصدير كافة بيانات النظام (المخزون، الفواتير، العملاء، الأسعار...) إلى ملف JSON واحد',
+    fbImportDesc:'استيراد نسخة احتياطية سابقة من ملف JSON — سيتم استبدال البيانات الحالية',
+    fbExportBtn:'📤 تصدير كافة البيانات',fbImportBtn:'📥 استيراد كافة البيانات',
     totalLabel:'الإجمالي',varietyLabel:'صنف',
     reqFields:'⚠️ يرجى ملء جميع الحقول المطلوبة',
     insufficientStock:'المخزون غير كافٍ',availableStock:'المتوفر',
@@ -6054,6 +6064,10 @@ const TX={
     backupWeeklySub:'Haftada bir kez',backupOnClose:'☑️ Kapanışta Yedek',
     backupOnCloseSub:'Tarayıcı kapatıldığında',backupTitle:'Yedekleme Ayarları',
     saveFile:'💾 Dosyayı Kaydet',backup:'🔄 Yedekleme',importBtn:'📥 İçe Aktar',
+    navBackupData:'Veri Yedekleme',fbTitle:'Veri Yedekleme',
+    fbExportDesc:'Tüm sistem verilerini (stok, faturalar, müşteriler, fiyatlar...) tek bir JSON dosyasına aktarın',
+    fbImportDesc:'Önceki bir JSON yedeğini içe aktarın — mevcut veriler değiştirilecektir',
+    fbExportBtn:'📤 Tüm Verileri Dışa Aktar',fbImportBtn:'📥 Tüm Verileri İçe Aktar',
     totalLabel:'Toplam',varietyLabel:'çeşit',
     reqFields:'⚠️ Lütfen tüm alanları doldurun',
     insufficientStock:'Yetersiz stok',availableStock:'Mevcut',
@@ -6535,10 +6549,10 @@ function applyMobNavLang(lang) {
     'mn-dashboard': L.mobNavDashboard || (lang==='tr'?'Ana Sayfa':'الرئيسية'),
     'mn-w1': lang==='tr' ? (warehouses[0]?warehouses[0].nameTr:'1. Depo') : (warehouses[0]?warehouses[0].nameAr:'مستودع 1'),
     'mn-w2': lang==='tr' ? (warehouses[1]?warehouses[1].nameTr:'2. Depo') : (warehouses[1]?warehouses[1].nameAr:'مستودع 2'),
-    'mn-invoice': L.invoice || (lang==='tr'?'Fatura':'فاتورة'),
-    'mn-addstock': L.addstock || (lang==='tr'?'Stok Ekle':'إضافة'),
-    'mn-dose': L.navDose || (lang==='tr'?'Doz Hesap.':'جرعات'),
-    'mn-drugtypes': L.navDrugtypes || (lang==='tr'?'İlaç Türleri':'أنواع'),
+    'mn-invoice': lang==='tr'?'Fatura':'فاتورة',
+    'mn-addstock': lang==='tr'?'Stok Ekle':'إضافة',
+    'mn-dose': lang==='tr'?'Doz Hesap.':'جرعات',
+    'mn-drugtypes': lang==='tr'?'İlaç Türleri':'أنواع',
     'mn-export': lang==='tr'?'Dışa Aktar':'تصدير',
     'mn-actions': L.mobActionsTitle||'⚙️',
     'mn-menu': lang==='tr'?'Menü':'القائمة',
@@ -6620,6 +6634,9 @@ function setLang(lang){
   // All regions option
   const optAllReg=document.getElementById('opt-all-regions');
   if(optAllReg)optAllReg.textContent=T('allRegions');
+  // Customer search placeholder (sales page)
+  const salesCustInp=document.getElementById('sales-cust');
+  if(salesCustInp)salesCustInp.placeholder=lang==='tr'?'🔍 Müşteri ara...':'🔍 بحث عن زبون...';
   // Header backup buttons
   const btnBackup=document.getElementById('btn-backup');
   if(btnBackup)btnBackup.textContent='🔄 '+T('backup').replace('🔄 ','');
@@ -9527,6 +9544,7 @@ function setSalesPeriod(p){
   salesPeriod=p;['day','week','month','all'].forEach(x=>document.getElementById('stab-'+x).classList.remove('active'));
   document.getElementById('stab-'+p).classList.add('active');renderSales();
 }
+function trNorm(s){return String(s||'').replace(/İ/g,'i').replace(/I/g,'i').replace(/ı/g,'i').toLowerCase();}
 function salesFilter(s){
   const today=new Date(),d=new Date(s.date);
   if(salesPeriod==='day')return s.date===todayStr();
@@ -9580,7 +9598,8 @@ function sendInvoiceWhatsApp(invNo) {
 
 function renderSales(){
   const rF=document.getElementById('sales-reg')?.value||'';
-  const list=salesLog.filter(s=>salesFilter(s)&&(!rF||s.region===rF));
+  const cF=trNorm(document.getElementById('sales-cust')?.value||'').trim();
+  const list=salesLog.filter(s=>salesFilter(s)&&(!rF||s.region===rF)&&(!cF||trNorm(s.customer).includes(cF)));
   const total=list.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0),qty=list.reduce((s,r)=>s+r.qty,0);
   document.getElementById('salesStats').innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap">
     <span class="bdg bg" style="font-size:12px;padding:6px 14px">📦 ${qty} ${T('outSold')}</span>
@@ -10795,7 +10814,7 @@ function _doImportStockFromXlsx(){
   };
   inp.click();
 }
-function exportSalesExcel(){const rF=document.getElementById('sales-reg')?.value||'';const list=salesLog.filter(s=>salesFilter(s)&&(!rF||s.region===rF));const h=currentLang==='ar'?['التاريخ','الفاتورة','العميل','المنطقة','الدواء','الكمية','السعر','خصم%','الإجمالي']:['Tarih','Fatura','Müşteri','Bölge','İlaç','Miktar','Fiyat','İndirim%','Toplam ₺'];const rows=list.map(r=>[fmtDate(r.date),r.invNo,r.customer,r.region||'—',r.name,r.qty,r.price,r.disc,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','','','','','',list.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0)]);const _isAr=currentLang==='ar';dlXlsx(makeWb(h,rows,_isAr?'المبيعات':'Satışlar'),`${_isAr?'مبيعات':'satislar'}_${salesPeriod}_${todayStr()}.xlsx`);showToast('📥');}
+function exportSalesExcel(){const rF=document.getElementById('sales-reg')?.value||'';const cF=trNorm(document.getElementById('sales-cust')?.value||'').trim();const list=salesLog.filter(s=>salesFilter(s)&&(!rF||s.region===rF)&&(!cF||trNorm(s.customer).includes(cF)));const h=currentLang==='ar'?['التاريخ','الفاتورة','العميل','المنطقة','الدواء','الكمية','السعر','خصم%','الإجمالي']:['Tarih','Fatura','Müşteri','Bölge','İlaç','Miktar','Fiyat','İndirim%','Toplam ₺'];const rows=list.map(r=>[fmtDate(r.date),r.invNo,r.customer,r.region||'—',r.name,r.qty,r.price,r.disc,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','','','','','',list.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0)]);const _isAr=currentLang==='ar';dlXlsx(makeWb(h,rows,_isAr?'المبيعات':'Satışlar'),`${_isAr?'مبيعات':'satislar'}_${salesPeriod}_${todayStr()}.xlsx`);showToast('📥');}
 function exportMovementsExcel(){const h=T('tblMov');const rows=movements.map(m=>[fmtDate(m.date),m.name,movTypeLabel(m.type),m.qty,m.loc,m.by,m.notes||'']);const _isArM=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArM?'الحركات':'Hareketler'),`${_isArM?'حركات':'hareketler'}_${todayStr()}.xlsx`);showToast('📥');}
 function exportReturnsExcel(){const h=currentLang==='ar'?['التاريخ','الزبون','الدواء','العبوة','المستودع','الكمية','الفاتورة','السبب']:['Tarih','Müşteri','İlaç','Ambalaj','Depo','Miktar','Fatura','Sebep'];const rows=returnsLog.map(r=>[fmtDate(r.date),r.customer,r.name,r.pkg,depN(r.dep),r.qty,r.invRef||'',r.reason]);const _isArR=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArR?'المرتجعات':'İadeler'),`${_isArR?'مرتجعات':'iadeler'}_${todayStr()}.xlsx`);showToast('📥');}
 function exportInvoiceExcel(){const isAr=currentLang==='ar';const customer=document.getElementById('inv-cust').value||'';const invNo=document.getElementById('inv-no').value;const date=document.getElementById('inv-date').value||todayStr();const region=document.getElementById('inv-region').value;const vr=invoiceRows.filter(r=>r.name&&r.qty>0);const sub=vr.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);const h=T('tblInv').slice(0,7);const rows=vr.map((r,i)=>[i+1,r.name,r.pkg,r.qty,r.price,r.disc,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','','',T('subTotal'),sub]);rows.push(['','','','','',T('grandTotal'),sub]);const ws=XLSX.utils.aoa_to_sheet([[`${T('invoiceNoLabel')}: ${invNo}`],[`${T('customerLabel')}: ${customer}`],[`${T('date')}: ${fmtDate(date)}`],[`${T('regionLabel')}: ${region||'—'}`],[''],h,...rows]);const wb2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb2,ws,isAr?'فاتورة':'Fatura');dlXlsx(wb2,`${isAr?'فاتورة':'fatura'}_${invNo}.xlsx`);showToast('📥');}
@@ -10934,6 +10953,45 @@ function openBackupModal() {
   document.body.appendChild(modal);
   document.body.style.overflow = 'hidden';
   // إغلاق عند النقر خارج الـ modal
+  modal.addEventListener('click', function(e){ if(e.target===modal){modal.remove();document.body.style.overflow='';} });
+}
+
+// ── النسخة الاحتياطية الكاملة (تصدير/استيراد من القائمة الجانبية) ──
+function openFullBackupModal() {
+  var existing = document.getElementById('fullBackupModal');
+  if (existing) { existing.remove(); }
+  const isAr = currentLang==='ar';
+  const lastExport = (function(){ try { return localStorage.getItem('beydun_last_export')||''; } catch(e){ return ''; } })();
+  const modal = document.createElement('div');
+  modal.className = 'mo';
+  modal.id = 'fullBackupModal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:420px">
+      <div class="mh" style="background:linear-gradient(135deg,#1B5E20,#2E7D32)">
+        <h3>💾 ${T('fbTitle')}</h3>
+        <button class="mc" onclick="document.getElementById('fullBackupModal').remove();document.body.style.overflow=''">✕</button>
+      </div>
+      <div class="mb">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="padding:14px;background:#f8f9fa;border-radius:10px">
+            <div style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5">${T('fbExportDesc')}</div>
+            <button class="btn bp" style="width:100%;justify-content:center" onclick="exportBackup()">${T('fbExportBtn')}</button>
+            ${lastExport?`<div style="font-size:10px;color:#888;margin-top:6px;text-align:center">${isAr?'آخر تصدير':'Son dışa aktarma'}: ${lastExport}</div>`:''}
+          </div>
+          <div style="padding:14px;background:#fff8e1;border-radius:10px;border:1px solid #ffe082">
+            <div style="font-size:12px;color:#6d4c00;margin-bottom:10px;line-height:1.5">⚠️ ${T('fbImportDesc')}</div>
+            <button class="btn" style="width:100%;justify-content:center;background:#F57F17;color:#fff" onclick="document.getElementById('fullBackupModal').remove();document.body.style.overflow='';importBackup()">${T('fbImportBtn')}</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button class="btn bs" onclick="document.getElementById('fullBackupModal').remove();document.body.style.overflow=''">
+            ${T('backupClose')}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
   modal.addEventListener('click', function(e){ if(e.target===modal){modal.remove();document.body.style.overflow='';} });
 }
 
