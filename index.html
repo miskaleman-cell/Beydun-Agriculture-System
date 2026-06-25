@@ -9162,6 +9162,13 @@ function renderInvoiceRows(){
     const rowDep=r.dep||1;
     const filteredDrugs=db.filter(x=>x.dep===rowDep);
     const opts=filteredDrugs.map(x=>`<option value="${h(x.name+' — '+x.pkg)}">${h(x.name)} — ${h(x.pkg)}</option>`).join('');
+    // حساب الكمية المتاحة للدواء المختار في المستودع المحدد
+    const _stockItem=r.name ? (db.find(x=>x.name.toUpperCase()===r.name.toUpperCase()&&x.pkg===r.pkg&&x.dep===rowDep)||db.find(x=>x.name.toUpperCase()===r.name.toUpperCase()&&x.dep===rowDep)) : null;
+    const _stockQty=_stockItem ? (_stockItem.qty||0) : null;
+    const _stockLabel=isAr?'المتوفر':'Mevcut';
+    const _stockHtml=r.name && _stockQty!==null
+      ? `<div style="font-size:11px;margin-top:4px;padding:3px 7px;border-radius:5px;font-weight:700;display:inline-block;background:${_stockQty>0?'#E8F5E9':'#FFEBEE'};color:${_stockQty>0?'#2E7D32':'#C62828'};border:1px solid ${_stockQty>0?'#A5D6A7':'#EF9A9A'}">📦 ${_stockLabel}: ${_stockQty}</div>`
+      : '';
     const hasRef=r.urefType&&r.urefVal;
     const isAdopted=r.urefAdopted;
 
@@ -9186,6 +9193,7 @@ function renderInvoiceRows(){
       <input list="pl${i}" value="${h(r.name&&r.pkg ? r.name+' — '+r.pkg : r.name)}" onchange="invRowChange(${i},'name',this.value)"
         style="width:100%;padding:5px 8px;border:1.5px solid var(--gy2);border-radius:6px;font-family:inherit;font-size:12px">
       <datalist id="pl${i}">${opts}</datalist>
+      ${_stockHtml}
       <!-- زر توسيع مرجع الاستخدام -->
       <button class="inv-uref-toggle ${hasRef?'active':''}" onclick="_toggleURef(${i})" style="margin-top:5px">
         ${hasRef?'🌿 '+r.urefType+'·'+r.urefVal+' '+r.urefUnit:'➕ '+(isAr?'مرجع استخدام':'Kullanım Ref.')}
