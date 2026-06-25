@@ -2078,7 +2078,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
 <div id="page-reports" class="hidden">
   <!-- Actions Bar -->
   <div id="rpt-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:#fff;border-radius:12px;box-shadow:var(--sh)">
-    <span style="font-weight:700;color:var(--g8);font-size:14px">📄 تقرير المخزون</span>
+    <span id="rpt-title" style="font-weight:700;color:var(--g8);font-size:14px">📄 تقرير المخزون</span>
     <div style="flex:1"></div>
     <!-- Report Type Tabs -->
     <div class="tbs">
@@ -2134,7 +2134,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     </div>
     <div class="panel">
       <div class="ph" style="background:linear-gradient(to left,#1565C0,#1976D2)">
-        <span class="pt" style="color:#fff">🏆 أكثر المنتجات مبيعاً</span>
+        <span class="pt" id="lbl-rep-topsell" style="color:#fff">🏆 أكثر المنتجات مبيعاً</span>
       </div>
       <div class="tw"><table>
         <thead><tr style="background:linear-gradient(to left,#1565C0,#1976D2)" id="topSelTh"></tr></thead>
@@ -2148,13 +2148,13 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="panel">
         <div class="ph" style="background:linear-gradient(to left,#37474F,#546E7A)">
-          <span class="pt" style="color:#fff">📅 المبيعات الشهرية</span>
+          <span class="pt" id="lbl-rep-monthly" style="color:#fff">📅 المبيعات الشهرية</span>
         </div>
         <div class="pb" id="repMonthly" style="min-height:120px"></div>
       </div>
       <div class="panel">
         <div class="ph" style="background:linear-gradient(to left,#BF360C,#E64A19)">
-          <span class="pt" style="color:#fff">⚠️ منتجات تحتاج تجديد</span>
+          <span class="pt" id="lbl-rep-lowstock" style="color:#fff">⚠️ منتجات تحتاج تجديد</span>
         </div>
         <div class="pb" id="repLowStock" style="min-height:120px"></div>
       </div>
@@ -2625,7 +2625,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
           <div style="padding:14px">
             <!-- Dose type selector -->
             <div style="margin-bottom:12px">
-              <div style="font-size:11px;font-weight:700;color:var(--gy5);margin-bottom:8px">نوع الجرعة</div>
+              <div id="dose-type-label" style="font-size:11px;font-weight:700;color:var(--gy5);margin-bottom:8px">نوع الجرعة</div>
               <div class="dose-type-grid">
                 <button class="dose-type-btn active" id="dtype-water" onclick="setDoseType('water')">
                   <span class="dti">💧</span>حسب الماء<br><span style="font-size:9px;color:var(--gy5)">مل/لتر أو مل/400لتر</span>
@@ -3114,18 +3114,18 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div class="sb"><span>🔍</span><input id="bkts-search" placeholder="بحث..." oninput="renderBKTSTable()" style="width:180px"></div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span style="font-size:11px;font-weight:700;color:var(--gy7)">المستودع:</span>
+          <span id="bkts-dep-label" style="font-size:11px;font-weight:700;color:var(--gy7)">المستودع:</span>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border:1.5px solid #FFCCBC;border-radius:20px;background:#FBE9E7;transition:all .15s" id="bkts-wh-lbl-1">
             <input type="checkbox" id="bkts-wh-1" value="1" checked onchange="renderBKTSTable()" style="accent-color:#E64A19;cursor:pointer">
-            🏭 م.الأول
+            🏭 <span id="bkts-wh-name-1">م.الأول</span>
           </label>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border:1.5px solid #FFCCBC;border-radius:20px;background:#FBE9E7;transition:all .15s" id="bkts-wh-lbl-2">
             <input type="checkbox" id="bkts-wh-2" value="2" checked onchange="renderBKTSTable()" style="accent-color:#E64A19;cursor:pointer">
-            🏪 م.الثاني
+            🏪 <span id="bkts-wh-name-2">م.الثاني</span>
           </label>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border:1.5px solid #FFCCBC;border-radius:20px;background:#FBE9E7;transition:all .15s" id="bkts-wh-lbl-3">
             <input type="checkbox" id="bkts-wh-3" value="3" checked onchange="renderBKTSTable()" style="accent-color:#E64A19;cursor:pointer">
-            📚 م.الثالث
+            📚 <span id="bkts-wh-name-3">م.الثالث</span>
           </label>
         </div>
       </div>
@@ -3133,13 +3133,13 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <table>
           <thead><tr style="background:linear-gradient(to left,#BF360C,#E64A19)">
             <th style="color:#fff">#</th>
-            <th style="color:#fff">اسم الدواء</th>
-            <th style="color:#fff">العبوة</th>
-            <th style="color:#fff">المستودع</th>
-            <th style="color:#fff">الكمية</th>
-            <th style="color:#fff">النوع</th>
-            <th style="color:#fff">المادة الفعّالة</th>
-            <th style="color:#fff">تعديل</th>
+            <th style="color:#fff" id="bkts-th-name">اسم الدواء</th>
+            <th style="color:#fff" id="bkts-th-pkg">العبوة</th>
+            <th style="color:#fff" id="bkts-th-dep">المستودع</th>
+            <th style="color:#fff" id="bkts-th-qty">الكمية</th>
+            <th style="color:#fff" id="bkts-th-type">النوع</th>
+            <th style="color:#fff" id="bkts-th-compound">المادة الفعّالة</th>
+            <th style="color:#fff" id="bkts-th-edit">تعديل</th>
           </tr></thead>
           <tbody id="bkts-tbody"></tbody>
         </table>
@@ -3163,18 +3163,18 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div class="sb"><span>🔍</span><input id="gts-search" placeholder="بحث..." oninput="renderGTSTable()" style="width:180px"></div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span style="font-size:11px;font-weight:700;color:var(--gy7)">المستودع:</span>
+          <span id="gts-dep-label" style="font-size:11px;font-weight:700;color:var(--gy7)">المستودع:</span>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border:1.5px solid #C8E6C9;border-radius:20px;background:#E8F5E9;transition:all .15s" id="gts-wh-lbl-1">
             <input type="checkbox" id="gts-wh-1" value="1" checked onchange="renderGTSTable()" style="accent-color:#2E7D32;cursor:pointer">
-            🏭 م.الأول
+            🏭 <span id="gts-wh-name-1">م.الأول</span>
           </label>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border:1.5px solid #C8E6C9;border-radius:20px;background:#E8F5E9;transition:all .15s" id="gts-wh-lbl-2">
             <input type="checkbox" id="gts-wh-2" value="2" checked onchange="renderGTSTable()" style="accent-color:#2E7D32;cursor:pointer">
-            🏪 م.الثاني
+            🏪 <span id="gts-wh-name-2">م.الثاني</span>
           </label>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 10px;border:1.5px solid #C8E6C9;border-radius:20px;background:#E8F5E9;transition:all .15s" id="gts-wh-lbl-3">
             <input type="checkbox" id="gts-wh-3" value="3" checked onchange="renderGTSTable()" style="accent-color:#2E7D32;cursor:pointer">
-            📚 م.الثالث
+            📚 <span id="gts-wh-name-3">م.الثالث</span>
           </label>
         </div>
       </div>
@@ -3182,13 +3182,13 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <table>
           <thead><tr style="background:linear-gradient(to left,#1B5E20,#2E7D32)">
             <th style="color:#fff">#</th>
-            <th style="color:#fff">اسم الدواء</th>
-            <th style="color:#fff">العبوة</th>
-            <th style="color:#fff">المستودع</th>
-            <th style="color:#fff">الكمية</th>
-            <th style="color:#fff">النوع</th>
-            <th style="color:#fff">المادة الفعّالة</th>
-            <th style="color:#fff">تعديل</th>
+            <th style="color:#fff" id="gts-th-name">اسم الدواء</th>
+            <th style="color:#fff" id="gts-th-pkg">العبوة</th>
+            <th style="color:#fff" id="gts-th-dep">المستودع</th>
+            <th style="color:#fff" id="gts-th-qty">الكمية</th>
+            <th style="color:#fff" id="gts-th-type">النوع</th>
+            <th style="color:#fff" id="gts-th-compound">المادة الفعّالة</th>
+            <th style="color:#fff" id="gts-th-edit">تعديل</th>
           </tr></thead>
           <tbody id="gts-tbody"></tbody>
         </table>
@@ -5793,7 +5793,7 @@ const TX={
     initialQty:'الكمية الابتدائية',addMedBtn:'✅ إضافة الدواء',
     allProducts:'📋 جميع المنتجات',
     medNameTh:'اسم الدواء',pkgTh:'العبوة',actionTh:'إجراء',priceTh:'السعر ₺',
-    salesByRegion:'📊 المبيعات حسب المنطقة',stockByDep:'🏭 المخزون حسب المستودع',
+    salesByRegion:'📊 المبيعات حسب المنطقة',stockByDep:'🏭 المخزون حسب المستودع',topSellingProducts:'🏆 أكثر المنتجات مبيعاً',
     clearAuditBtn:'🗑️ مسح السجل',allRights:'جميع الحقوق محفوظة',
     stockAlerts:'⚠️ تنبيهات المخزون',recentMovements:'🔄 آخر الحركات',
     returnsLog:'📋 سجل المرتجعات',
@@ -6094,7 +6094,7 @@ const TX={
     initialQty:'Başlangıç Miktarı',addMedBtn:'✅ İlaç Ekle',
     allProducts:'📋 Tüm Ürünler',
     medNameTh:'İlaç Adı',pkgTh:'Ambalaj',actionTh:'İşlem',priceTh:'Fiyat ₺',
-    salesByRegion:'📊 Bölgeye Göre Satışlar',stockByDep:'🏭 Depoya Göre Stok',
+    salesByRegion:'📊 Bölgeye Göre Satışlar',stockByDep:'🏭 Depoya Göre Stok',topSellingProducts:'🏆 En Çok Satılan Ürünler',
     clearAuditBtn:'🗑️ Kaydı Temizle',allRights:'Tüm Hakları Saklıdır',
     stockAlerts:'⚠️ Stok Uyarıları',recentMovements:'🔄 Son Hareketler',
     returnsLog:'📋 İade Kayıtları',
@@ -6603,6 +6603,67 @@ function setLang(lang){
   });
   const cur=document.querySelector('.nav-btn.active');
   if(cur)renderPage(cur.id.replace('nav-',''));
+  // عنوان وتبويبات صفحة التقارير
+  const rptTitle=document.getElementById('rpt-title');
+  if(rptTitle)rptTitle.textContent=lang==='tr'?'📄 Stok Raporu':'📄 تقرير المخزون';
+  const rTabStock=document.getElementById('rtab-stock');
+  if(rTabStock)rTabStock.textContent=lang==='tr'?'📦 Tam Stok':'📦 المخزون الكامل';
+  const rTabSales=document.getElementById('rtab-sales');
+  if(rTabSales)rTabSales.textContent=lang==='tr'?'💰 Satış Özeti':'💰 ملخص المبيعات';
+  const rTabMovement=document.getElementById('rtab-movement');
+  if(rTabMovement)rTabMovement.textContent=lang==='tr'?'🔄 Stok Hareketi':'🔄 حركة المخزون';
+  const lblRptStock=document.getElementById('lbl-rpt-stock');
+  if(lblRptStock)lblRptStock.textContent=lang==='tr'?'📦 Tam Stok Listesi':'📦 جرد المخزون الكامل';
+  const lblRepReg=document.getElementById('lbl-rep-reg');
+  if(lblRepReg)lblRepReg.textContent=L.salesByRegion||lblRepReg.textContent;
+  const lblRepDep=document.getElementById('lbl-rep-dep');
+  if(lblRepDep)lblRepDep.textContent=L.stockByDep||lblRepDep.textContent;
+  const lblRepTopsell=document.getElementById('lbl-rep-topsell');
+  if(lblRepTopsell)lblRepTopsell.textContent=L.topSellingProducts||lblRepTopsell.textContent;
+  const lblRepMonthly=document.getElementById('lbl-rep-monthly');
+  if(lblRepMonthly)lblRepMonthly.textContent=lang==='tr'?'📅 Aylık Satışlar':'📅 المبيعات الشهرية';
+  const lblRepLowstock=document.getElementById('lbl-rep-lowstock');
+  if(lblRepLowstock)lblRepLowstock.textContent=lang==='tr'?'⚠️ Yenilenmesi Gereken Ürünler':'⚠️ منتجات تحتاج تجديد';
+  // صفحة فاتورة الشراء
+  (function(){
+    const isAr2 = lang!=='tr';
+    const purMap = {
+      'lbl-pur-t': isAr2?'📦 فاتورة شراء جديدة':'📦 Yeni Alış Faturası',
+      'lbl-pur-sup': isAr2?'المورد':'Tedarikçi',
+      'lbl-pur-invno': isAr2?'رقم الفاتورة':'Fatura No',
+      'lbl-pur-date': isAr2?'التاريخ':'Tarih',
+      'lbl-pur-dep': isAr2?'المستودع':'Depo',
+      'lbl-pur-by': isAr2?'المسؤول':'Sorumlu',
+      'lbl-pur-notes': isAr2?'ملاحظات':'Notlar',
+      'pur-sub-lbl': isAr2?'إجمالي الشراء':'Alış Toplamı',
+      'lbl-pur-grand': isAr2?'الإجمالي الكلي':'Genel Toplam',
+      'lbl-pur-log': isAr2?'📋 سجل فواتير الشراء':'📋 Alış Fatura Kaydı',
+    };
+    Object.keys(purMap).forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.textContent=purMap[id];
+    });
+    const bPurAdd=document.getElementById('b-pur-add');
+    if(bPurAdd) bPurAdd.textContent=isAr2?'+ صف':'+ Satır';
+    const bPurOk=document.getElementById('b-pur-ok');
+    if(bPurOk) bPurOk.textContent=isAr2?'✅ تأكيد الشراء':'✅ Alışı Onayla';
+    const bPurClr=document.getElementById('b-pur-clr');
+    if(bPurClr) bPurClr.textContent=isAr2?'🗑️ مسح':'🗑️ Temizle';
+  })();
+  // BKTS / GTS table headers
+  ['bkts','gts'].forEach(prefix=>{
+    const map={name:'bktsColName',pkg:'bktsColPkg',dep:'bktsColDep',qty:'bktsColQty',type:'bktsColType',compound:'bktsColCompound',edit:'bktsColEdit'};
+    Object.keys(map).forEach(suffix=>{
+      const el=document.getElementById(prefix+'-th-'+suffix);
+      if(el)el.textContent=L[map[suffix]]||el.textContent;
+    });
+    const depLbl=document.getElementById(prefix+'-dep-label');
+    if(depLbl)depLbl.textContent=L.bktsDepLabel||depLbl.textContent;
+    [1,2,3].forEach(depId=>{
+      const nameEl=document.getElementById(prefix+'-wh-name-'+depId);
+      if(nameEl)nameEl.textContent=depNames[depId];
+    });
+  });
   // Update backup button text
   const backupBtn = document.querySelector('[onclick="openBackupModal()"]');
   if(backupBtn) backupBtn.textContent = T('backup');
@@ -6610,6 +6671,9 @@ function setLang(lang){
   if(exportBtn) exportBtn.textContent = lang==='ar'?'📤 تصدير':'📤 Dışa Aktar';
   const importBtn = document.querySelector('[onclick="importBackup()"]');
   if(importBtn) importBtn.textContent = T('importBtn');
+  // زر واتساب في الفاتورة
+  const waBtn=document.getElementById('b-inv-wa');
+  if(waBtn) waBtn.textContent = '📲 WhatsApp';
   // تحديث زر تعديل الكميات في صفحة الكل
   const qeAllBtn=document.getElementById('b-qty-editor');
   if(qeAllBtn)qeAllBtn.textContent=T('editQty');
@@ -6816,8 +6880,8 @@ function applyDoseLang(lang){
   if(refPH)refPH.textContent=L.doseRefTitle||refPH.textContent;
   const refSub=document.querySelector('#dtab-content-calc .panel .ph span[style*="color:var(--gy5)"]');
   if(refSub)refSub.textContent=L.doseRefSub||refSub.textContent;
-  const typeLabel=document.querySelector('#dtab-content-calc [style*="نوع الجرعة"], #dtab-content-calc div[style*="font-size:11px"][style*="font-weight:700"]');
-  if(typeLabel&&typeLabel.textContent.includes('نوع'))typeLabel.textContent=L.doseTypeLabel||typeLabel.textContent;
+  const typeLabel=document.getElementById('dose-type-label');
+  if(typeLabel)typeLabel.textContent=L.doseTypeLabel||typeLabel.textContent;
 
   // Dose type buttons
   const dtWater=document.getElementById('dtype-water');
@@ -7172,7 +7236,15 @@ function renderPage(p){
 // ══════════════════════════════════════════════
 // 💊 DRUG TYPES PAGE
 // ══════════════════════════════════════════════
-var depNames = {1:'م.الأول',2:'م.الثاني',3:'م.الثالث'};
+var depNames = new Proxy({}, {
+  get: function(target, dep) {
+    var wh = (typeof warehouses !== 'undefined' && warehouses) ? warehouses.find(function(w){ return String(w.id) === String(dep); }) : null;
+    if (wh) return (currentLang === 'tr') ? (wh.nameTr || wh.nameAr) : wh.nameAr;
+    var fallbackAr = {1:'م.الأول',2:'م.الثاني',3:'م.الثالث'};
+    var fallbackTr = {1:'1. Depo',2:'2. Depo',3:'3. Depo'};
+    return (currentLang === 'tr') ? (fallbackTr[dep]||dep) : (fallbackAr[dep]||dep);
+  }
+});
 
 function getEntryForItem(id){
   return drugTypesDB.find(function(e){ return e.itemId===id; }) || null;
@@ -7408,7 +7480,7 @@ function renderBKTSTable(){
       +'<td>'+compLbl+'</td>'
       +'<td style="white-space:nowrap">'
       +'<button onclick="openBKTSEditModal('+x.id+')" style="background:linear-gradient(135deg,#BF360C,#E64A19);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px">✏️ '+T('edit').replace('✏️ ','')+' </button>'
-      +'<button onclick="removeBKTSEntry('+x.id+')" style="background:linear-gradient(135deg,#37474F,#546E7A);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">🗑️ إزالة</button>'
+      +'<button onclick="removeBKTSEntry('+x.id+')" style="background:linear-gradient(135deg,#37474F,#546E7A);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">🗑️ '+(currentLang==='ar'?'إزالة':'Kaldır')+'</button>'
       +'</td>'
       +'</tr>';
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gy5)">'+T('bktsNoDrugs')+'</td></tr>';
@@ -7601,7 +7673,7 @@ function renderGTSTable(){
       +'<td>'+compLbl+'</td>'
       +'<td style="white-space:nowrap">'
       +'<button onclick="openGTSEditModal('+x.id+')" style="background:linear-gradient(135deg,#1B5E20,#2E7D32);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px">✏️ '+T('edit').replace('✏️ ','')+' </button>'
-      +'<button onclick="removeGTSEntry('+x.id+')" style="background:linear-gradient(135deg,#37474F,#546E7A);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">🗑️ إزالة</button>'
+      +'<button onclick="removeGTSEntry('+x.id+')" style="background:linear-gradient(135deg,#37474F,#546E7A);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;">🗑️ '+(currentLang==='ar'?'إزالة':'Kaldır')+'</button>'
       +'</td>'
       +'</tr>';
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gy5)">'+T('bktsNoDrugs')+'</td></tr>';
@@ -7976,7 +8048,7 @@ function renderDashboard(){
     recent.map(m=>{const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
       return`<tr style="border-bottom:1px solid var(--gy2)"><td style="padding:6px 12px">${fmtDate(m.date)}</td>
         <td style="padding:6px 12px"><strong>${h(m.name)}</strong></td>
-        <td style="padding:6px 12px"><span class="bdg ${tc}">${h(m.type)}</span></td>
+        <td style="padding:6px 12px"><span class="bdg ${tc}">${h(movTypeLabel(m.type))}</span></td>
         <td style="padding:6px 12px;font-weight:700">${h(m.qty)}</td></tr>`;}).join('')+'</table>'
     :`<div style="padding:20px;text-align:center;color:var(--gy5);font-size:12px">—</div>`;
   const locs=warehouses.map(w=>({dep:w.id,qty:db.filter(x=>x.dep===w.id).reduce((s,x)=>s+x.qty,0),cap:8000}));
@@ -8133,6 +8205,7 @@ function renderWarehouse(dep){
       <button class="qf-chip qf-red ${curFilter==='out'?'active':''}" id="wh-chip-${dep}-out" onclick="setWhFilter(${dep},'out')">🔴 ${T('outOfStock')||T('noResults')} (${outCount})</button>
       <button class="qf-chip qf-amber ${curFilter==='low'?'active':''}" id="wh-chip-${dep}-low" onclick="setWhFilter(${dep},'low')">🟡 ${T('lowStock')||'—'} (${lowCount})</button>
       <button class="qf-chip ${curFilter==='noprice'?'active':''}" id="wh-chip-${dep}-noprice" onclick="setWhFilter(${dep},'noprice')">💲 ${T('noPrice')} (${npCount})</button>
+      <button class="qf-chip ${getWhHideOut()?'active':''}" style="margin-${isAr?'right':'left'}:auto" onclick="toggleWhHideOut(${dep})">${getWhHideOut()?'👁️‍🗨️':'🙈'} ${isAr?'إخفاء المنتهي':'Tükenenleri Gizle'}</button>
     </div>
     <!-- شريط الإجراءات الجماعية -->
     <div class="bulk-bar" id="wh-bulkbar-${dep}">
@@ -8161,7 +8234,7 @@ function renderWarehouse(dep){
     </table></div>
   </div>`;
   window['_whList'+dep]=list;
-  _renderWhBody(dep, list, 0, 200);
+  filterWarehouse(dep);
   _updateWhBulkBar(dep);
 }
 function filterWarehouse(dep){
@@ -8172,7 +8245,18 @@ function filterWarehouse(dep){
   if(f==='out') filtered=filtered.filter(x=>x.qty===0);
   else if(f==='low') filtered=filtered.filter(x=>x.qty>0&&x.qty<=5);
   else if(f==='noprice') filtered=filtered.filter(x=>x.price===0);
+  else if(f==='all' && getWhHideOut()) filtered=filtered.filter(x=>x.qty>0);
   _renderWhBody(dep, filtered, 0, 200);
+}
+function getWhHideOut(){
+  try { return localStorage.getItem('beydun_wh_hide_out')==='1'; } catch(e){ return false; }
+}
+function setWhHideOut(val){
+  try { localStorage.setItem('beydun_wh_hide_out', val?'1':'0'); } catch(e){}
+}
+function toggleWhHideOut(dep){
+  setWhHideOut(!getWhHideOut());
+  renderWarehouse(dep);
 }
 function setWhFilter(dep,f){
   const cur=window['_whFilter'+dep]||'all';
@@ -9654,7 +9738,7 @@ function renderMovements(){
   var MOV_PAGE=250;
   function _movRow(m){const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
     return`<tr><td>${fmtDate(m.date)}</td><td><strong>${h(m.name)}</strong></td>
-      <td><span class="bdg ${tc}">${h(m.type)}</span></td>
+      <td><span class="bdg ${tc}">${h(movTypeLabel(m.type))}</span></td>
       <td><strong>${h(m.qty)}</strong></td><td>${h(m.loc)}</td><td>${h(m.by)}</td>
       <td style="font-size:11px">${h(m.notes||'—')}</td></tr>`;}
   var movBodyEl=document.getElementById('movBody');
@@ -9764,6 +9848,7 @@ function _auditLoadMore(){
 // ══════════════════════════════════════════════
 
 function initTransfer(){
+  _populateTransferDeps();
   populateTransferProducts();
   renderTransferLog();
   // Set default: to = different from from
@@ -9782,7 +9867,7 @@ function populateTransferProducts(){
   const sel=document.getElementById('tr-prod');
   if(!sel) return;
   sel.innerHTML=`<option value="">${T('chooseItem')}</option>`+
-    db.filter(x=>x.dep===dep).map(x=>`<option value="${h(x.id)}">${h(x.name)} (${h(x.pkg)}) — ${h(x.qty)}</option>`).join('');
+    db.filter(x=>x.dep===dep && x.qty>0).map(x=>`<option value="${h(x.id)}">${h(x.name)} (${h(x.pkg)}) — ${h(x.qty)}</option>`).join('');
   document.getElementById('tr-to')?.querySelectorAll('option').forEach(o=>{
     o.style.display=parseInt(o.value)!==dep?'':'none';
   });
@@ -11261,6 +11346,15 @@ function renderCustomersPage(){
   renderCustomerStats();
   renderCustomersList();
   updateCustDatalist();
+  const isAr=currentLang==='ar';
+  // تحديث عنوان النموذج حسب اللغة الحالية بدون مسح محتوى الحقول
+  const editId=document.getElementById('cust-edit-id')?.value;
+  if(!editId){
+    const title=document.getElementById('lbl-cust-form-t');
+    if(title) title.textContent=isAr?'👥 إضافة عميل جديد':'👥 Yeni Müşteri Ekle';
+  }
+  const listTitle=document.getElementById('lbl-cust-list');
+  if(listTitle) listTitle.textContent=isAr?'📋 قائمة العملاء':'📋 Müşteri Listesi';
 }
 
 function renderCustomerStats(){
@@ -11351,7 +11445,7 @@ function renderCustomersList(){
     <td style="color:var(--gy5)">${i+1}</td>
     <td>
       <strong>${h(c.name)}</strong>
-      ${c.reg ? '<span class="bdg btl" style="font-size:9px;margin-right:4px">✓ مسجل</span>' : '<span class="bdg" style="font-size:9px;background:#f3f4f6;color:#6b7280;margin-right:4px">ضيف</span>'}
+      ${c.reg ? `<span class="bdg btl" style="font-size:9px;margin-right:4px">✓ ${isAr?'مسجل':'Kayıtlı'}</span>` : `<span class="bdg" style="font-size:9px;background:#f3f4f6;color:#6b7280;margin-right:4px">${isAr?'ضيف':'Misafir'}</span>`}
       ${c.notes?`<div style="font-size:10px;color:var(--gy5);margin-top:1px">${h(c.notes)}</div>`:''}
     </td>
     <td><a href="tel:${h(c.phone)}" style="color:var(--b7);text-decoration:none">${h(c.phone)}</a></td>
@@ -12350,7 +12444,7 @@ function saveDoseToHistory(){
   if(!tw&&!ta){showToast('⚠️ '+T('enterMedAndPkg').replace('⚠️ ',''),'err');return;}
   doseHistory.unshift({
     id:Date.now(),date:todayStr(),
-    medName:med?med.name:'دواء غير محدد',medPkg:med?med.pkg:'',
+    medName:med?med.name:(currentLang==='ar'?'دواء غير محدد':'İlaç seçilmedi'),medPkg:med?med.pkg:'',
     type, targetWater:tw, targetArea:ta,
     doseType:type
   });
@@ -12418,7 +12512,7 @@ function renderDoseMedList(){
       <td style="font-weight:700;color:var(--g8);font-size:11px">${h(doseLabel)}</td>
       <td style="font-size:11px;color:var(--gy5)">${h(d?.notes||'—')}</td>
       <td>
-        <button class="btn bp bsm" onclick="openEditDoseModal(${x.id})">✏️ ${d?'تعديل':'إضافة'}</button>
+        <button class="btn bp bsm" onclick="openEditDoseModal(${x.id})">✏️ ${d?(isAr?'تعديل':'Düzenle'):(isAr?'إضافة':'Ekle')}</button>
         ${d?`<button class="btn bd bsm" onclick="deleteDoseEntry(${x.id})" style="margin-right:4px">🗑️</button>`:''}
       </td>
     </tr>`;
@@ -12583,6 +12677,16 @@ function _populatePurSuppliers() {
   }
 }
 
+function _populateTransferDeps() {
+  ['tr-from','tr-to'].forEach(function(id){
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = '';
+    warehouses.forEach(function(w){ sel.innerHTML += '<option value="'+w.id+'">'+h(getWarehouseName(w.id))+'</option>'; });
+    if (cur) sel.value = cur;
+  });
+}
 function _populatePurDep() {
   var sel = document.getElementById('pur-dep');
   if (!sel) return;
