@@ -8801,7 +8801,8 @@ function openNewMedModal(){
                 ${T('packaging')}
               </label>
               <input id="nm-pkg" list="nm-pkg-list" placeholder="${currentLang==='ar'?'مثال: 20 LT':'Örn: 20 LT'}"
-                style="width:100%;padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+                style="width:100%;padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"
+                oninput="checkDupMed(document.getElementById('nm-name').value,${dep})">
               <datalist id="nm-pkg-list">
                 ${pkgSet.map(p=>`<option value="${p}">`).join('')}
               </datalist>
@@ -8838,7 +8839,9 @@ function checkDupMed(val,dep){
   const el=document.getElementById('nm-dup');
   if(!el||!val.trim())return el&&(el.innerHTML='');
   const upper=val.trim().toUpperCase();
-  const sameDep=db.find(x=>x.dep===dep&&x.name.toUpperCase()===upper);
+  const pkgVal=(document.getElementById('nm-pkg')?.value||'').trim().toUpperCase();
+  // تكرار حقيقي: نفس الاسم + نفس العبوة + نفس المستودع
+  const sameDep=db.find(x=>x.dep===dep&&x.name.toUpperCase()===upper&&(!pkgVal||x.pkg.toUpperCase()===pkgVal));
   const otherDep=!sameDep&&db.find(x=>x.name.toUpperCase()===upper);
   if(sameDep){
     el.innerHTML=`<span style="color:#c62828">⚠️ ${T('medExistsSameDep')}</span>`;
@@ -8868,8 +8871,8 @@ function saveNewMed(dep){
     return;
   }
 
-  // تحقق من عدم التكرار في نفس المستودع
-  const dup=db.find(x=>x.dep===dep&&x.name.toUpperCase()===name);
+  // تحقق من عدم التكرار في نفس المستودع (نفس الاسم + نفس العبوة)
+  const dup=db.find(x=>x.dep===dep&&x.name.toUpperCase()===name&&x.pkg.toUpperCase()===pkg);
   if(dup){
     showToast(T('medExistsErr'),'err');
     return;
