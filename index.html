@@ -4330,8 +4330,13 @@ function _selfSave(json) {
 // زِد هذا الرقم عند تغيير بنية البيانات
 // ══════════════════════════════════════════════
 var SCHEMA_VERSION = 5;
-// رقم الإصدار النصي للتطبيق — حدّثه مع كل إصدار رئيسي
-var APP_VERSION = '28';
+// رقم الإصدار النصي للتطبيق — يجب أن يطابق رقم "BEYDUN AGRO V<رقم>" في
+// CHANGELOG.md دائماً (مثال: BEYDUN AGRO V2 ⇒ APP_VERSION = '2').
+// عند كل تسليم جديد: حدّث هذا السطر + عنوان CHANGELOG.md معاً، ثم شغّل
+// verify-version.js للتأكد من التطابق قبل التسليم.
+// sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
+// لتعديل CACHE_NAME في sw.js يدوياً.
+var APP_VERSION = '1';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -5455,6 +5460,62 @@ function exportBackup() {
   try { localStorage.setItem('beydun_last_export', exportTimeStr); } catch(e) {}
   _updateExportBtn(exportTimeStr);
   showToast(`📤 تم التصدير: ${filename}`);
+}
+
+// ── مشاركة النسخة الاحتياطية عبر قائمة مشاركة الجهاز (تلغرام → الرسائل المحفوظة، إلخ) ──
+async function shareBackup() {
+  try { if (typeof loadDosesDB === 'function') loadDosesDB(); } catch(e) {}
+  try { if (typeof loadBackupSettings === 'function') loadBackupSettings(); } catch(e) {}
+
+  var snap = null, raw = null, buildErr = null;
+  try { snap = _buildSnap(); raw = JSON.stringify(snap); } catch(e) { buildErr = e; }
+  if (!raw) {
+    showToast('❌ فشل بناء النسخة الاحتياطية: ' + (buildErr && buildErr.message ? buildErr.message : 'لا توجد بيانات'), 'err');
+    return;
+  }
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const datePart = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const timePart = `${pad(now.getHours())}-${pad(now.getMinutes())}`;
+  const filename = `agro_backup_${datePart}_${timePart}.json`;
+
+  // إن لم تكن مشاركة الملفات مدعومة على هذا الجهاز/المتصفح، نرجع لتصدير عادي
+  if (!(navigator.share && navigator.canShare)) {
+    showToast(currentLang==='ar' ? '⚠️ المشاركة غير مدعومة على هذا الجهاز — سيتم التصدير كملف عادي' : '⚠️ Paylaşım desteklenmiyor — dosya olarak dışa aktarılıyor', 'err');
+    exportBackup();
+    return;
+  }
+
+  try {
+    const file = new File([raw], filename, { type: 'application/json' });
+    if (!navigator.canShare({ files: [file] })) {
+      showToast(currentLang==='ar' ? '⚠️ مشاركة الملفات غير مدعومة هنا — سيتم التصدير كملف عادي' : '⚠️ Dosya paylaşımı desteklenmiyor — dışa aktarılıyor', 'err');
+      exportBackup();
+      return;
+    }
+    await navigator.share({
+      files: [file],
+      title: currentLang==='ar' ? 'نسخة احتياطية - بيدون للزراعة' : 'Yedek - Beydun Tarım',
+      text: currentLang==='ar' ? 'نسخة احتياطية بتاريخ ' + datePart : 'Yedekleme ' + datePart
+    });
+    const exportTimeStr = `${pad(now.getHours())}:${pad(now.getMinutes())} — ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+    try { localStorage.setItem('beydun_last_export', exportTimeStr); } catch(e) {}
+    _updateExportBtn(exportTimeStr);
+    showToast(currentLang==='ar' ? '📤 تم فتح قائمة المشاركة' : '📤 Paylaşım açıldı');
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      // المستخدم ألغى المشاركة بنفسه — لا حاجة لأي رسالة
+      return;
+    }
+    // فشل المشاركة لسبب آخر (غالبًا: التطبيق مفتوح عبر content:// وليس عبر خادم/PWA مثبّت،
+    // فيرفض النظام منح إذن الملف لتطبيق آخر برسالة "Permission denied").
+    // نتراجع تلقائيًا لحفظ الملف حتى يستطيع المستخدم إرفاقه يدويًا في تلغرام.
+    showToast(currentLang==='ar'
+      ? '⚠️ تعذّرت المشاركة المباشرة من هذا الوضع — تم حفظ الملف بدلاً من ذلك، أرفقه يدويًا في تلغرام'
+      : '⚠️ Doğrudan paylaşım başarısız — dosya kaydedildi, Telegramʼa manuel ekleyin', 'err');
+    exportBackup();
+  }
 }
 
 function _updateExportBtn(timeStr) {
@@ -11072,6 +11133,7 @@ function openFullBackupModal() {
           <div style="padding:14px;background:#f8f9fa;border-radius:10px">
             <div style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5">${T('fbExportDesc')}</div>
             <button class="btn bp" style="width:100%;justify-content:center" onclick="exportBackup()">${T('fbExportBtn')}</button>
+            <button class="btn" style="width:100%;justify-content:center;margin-top:8px;background:#0088cc;color:#fff" onclick="shareBackup()">📨 ${isAr?'مشاركة (تلغرام والمزيد)':'Paylaş (Telegram vb.)'}</button>
             ${lastExport?`<div style="font-size:10px;color:#888;margin-top:6px;text-align:center">${isAr?'آخر تصدير':'Son dışa aktarma'}: ${lastExport}</div>`:''}
           </div>
           <div style="padding:14px;background:#fff8e1;border-radius:10px;border:1px solid #ffe082">
@@ -13112,6 +13174,9 @@ setInterval(_updateAlertsBadge, 60000);
       تصدير نسخة احتياطية
       <br><span class="mob-sheet-sub" style="font-size:10px;color:var(--gy5);font-weight:400">آخر تصدير: —</span>
     </span>
+  </button>
+  <button class="mob-sheet-btn" onclick="closeMobActions();shareBackup()">
+    <span class="mob-sheet-icon">📨</span> مشاركة (تلغرام والمزيد)
   </button>
   <button class="mob-sheet-btn" onclick="openImportFromMobile()">
     <span class="mob-sheet-icon">📥</span> استيراد نسخة احتياطية
