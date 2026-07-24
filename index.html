@@ -1775,8 +1775,8 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <button class="btn bsm" style="background:var(--p1);color:var(--p9)" onclick="filterAllBy(3)" id="b-d3">م.الثالث</button>
         <button class="btn bxl bsm" onclick="exportStockExcel()" id="b-exp-all">📥 Excel</button>
         <button class="btn bsm" onclick="exportStockPDF()" id="b-exp-all-pdf" style="background:#c0392b;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px">📄 PDF</button>
-        <button class="btn bsm" onclick="exportMergedPDF()" id="b-exp-merged-pdf" style="background:#6A1B9A;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px" data-key="mergedPdfBtn">📄 الجميع</button>
         <button class="btn bsm" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);font-size:11px" onclick="openQtyEditor(null)" id="b-qty-editor">✏️ تعديل الكميات</button>
+        <button class="btn bsm" id="b-all-hideout" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);font-size:11px" onclick="toggleAllHideOut()">🙈</button>
       </div>
     </div>
 
@@ -4337,7 +4337,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '2';
+var APP_VERSION = '1';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -6026,7 +6026,6 @@ const TX={
     bktsNoDrugs:'لا توجد بيانات',
     gtsTitle:'🌱 GTS — تغذية نباتية',
     // ── تصدير Excel ──
-    mergedPdfBtn:'📄 الجميع',
     exportChooseDeps:'اختر المستودعات للتصدير',
     exportNoDeps:'⚠️ اختر مستودعًا واحدًا على الأقل',
     exportSuccess:'✅ تم التصدير بنجاح',
@@ -6328,7 +6327,6 @@ const TX={
     bktsNoDrugs:'Veri yok',
     gtsTitle:'🌱 GTS — Bitki Besleme',
     // ── تصدير Excel ──
-    mergedPdfBtn:'📄 Hepsi',
     exportChooseDeps:'Dışa Aktarmak İçin Depo Seçin',
     exportNoDeps:'⚠️ En az bir depo seçin',
     exportSuccess:'✅ Başarıyla dışa aktarıldı',
@@ -8778,8 +8776,10 @@ function renderAllTable(){
   const q=norm(document.getElementById('allSearch')?.value||'');
   _allTableFiltered = allFDep ? db.filter(x=>x.dep===allFDep) : db.slice();
   if(q) _allTableFiltered = _allTableFiltered.filter(x=>norm(x.name).includes(q)||norm(x.pkg).includes(q));
+  if(getWhHideOut()) _allTableFiltered = _allTableFiltered.filter(x=>x.qty>0);
   _allTablePage = 0;
   const isAr=currentLang==='ar';
+  _updateAllHideOutBtn();
   const el=document.getElementById('allTh');
   if(el)el.innerHTML=`<th style="color:#fff">#</th><th style="color:#fff">${isAr?'اسم الدواء':'İlaç Adı'}</th><th style="color:#fff">${isAr?'العبوة':'Ambalaj'}</th><th style="color:#fff">${isAr?'المستودع':'Depo'}</th><th style="color:#fff">${isAr?'الكمية':'Miktar'}</th>`;
   const body=document.getElementById('allBody');
@@ -8820,6 +8820,19 @@ function _allTableLoadMore(){
       <button class="btn bs bsm" onclick="_allTableLoadMore()">⬇️ ${remaining} ${isAr?'منتج إضافي':'daha'}</button>
     </td></tr>`);
   }
+}
+function toggleAllHideOut(){
+  setWhHideOut(!getWhHideOut());
+  renderAllTable();
+}
+function _updateAllHideOutBtn(){
+  const btn=document.getElementById('b-all-hideout');
+  if(!btn) return;
+  const isAr=currentLang==='ar';
+  const on=getWhHideOut();
+  btn.textContent=(on?'👁️‍🗨️':'🙈')+' '+(isAr?'إخفاء المنتهي':'Tükenenleri Gizle');
+  btn.style.background=on?'#fff':'rgba(255,255,255,.2)';
+  btn.style.color=on?'#37474F':'#fff';
 }
 function togglePriceVis(){showPriceInExport=document.getElementById('chkP').checked;updatePtText();renderAllTable();}
 function updatePtText(){const el=document.getElementById('pt-status');if(el)el.textContent=showPriceInExport?T('priceVisible'):T('priceHidden');}
@@ -8980,10 +8993,9 @@ function submitAdd(){
   if (!qRes.ok) { _guardErr(qRes.err); document.getElementById('as-qty').focus(); return; }
   const qty = qRes.val;
 
-  // ── حماية: سعر الشراء (فارغ = غير معروف/0 مسموح، لكن رقم سالب مرفوض) ──
+  // ── حماية: سعر الشراء ──
   const bpRes = sanitizePrice(document.getElementById('as-buyprice')?.value, {field:'سعر الشراء'});
-  if (!bpRes.ok) { _guardErr(bpRes.err); document.getElementById('as-buyprice')?.focus(); return; }
-  const buyPrice = bpRes.val;
+  const buyPrice = bpRes.ok ? bpRes.val : 0;
 
   if(!pid||!by){showToast(T('reqFields'),'err');return;}
   const item=db.find(x=>x.id===pid);if(!item){showToast(T('itemNotFound')||'❌ المنتج غير موجود','err');return;}
@@ -9537,27 +9549,6 @@ function _confirmInvoiceCore(){
 
   const validRows=invoiceRows.filter(r=>r.name&&r.qty>0);
   if(!customer||!validRows.length){showToast(currentLang==='ar'?'⚠️ أدخل اسم العميل وأضف صنفاً واحداً على الأقل':'⚠️ Müşteri adı ve en az bir ürün giriniz','err');return;}
-
-  // ── [إصلاح] تحقق من عدم تكرار رقم الفاتورة قبل الحفظ ──
-  if(invNo){
-    const _dupInv = salesLog.find(function(s){ return s.invNo === invNo; });
-    if(_dupInv){
-      const _msgDup = currentLang==='ar'
-        ? '⚠️ رقم الفاتورة "'+invNo+'" مستخدم مسبقاً (العميل: '+_dupInv.customer+').\nكل رقم فاتورة يجب أن يكون فريداً لتفادي الالتباس عند البحث أو الطباعة.\nهل تريد اختيار رقم آخر تلقائياً؟'
-        : '⚠️ Fatura numarası "'+invNo+'" zaten kullanılıyor (Müşteri: '+_dupInv.customer+').\nHer fatura numarası benzersiz olmalıdır.\nOtomatik olarak yeni bir numara seçilsin mi?';
-      if(confirm(_msgDup)){
-        var _maxFromLogDup=0;
-        salesLog.forEach(function(s){
-          var _m=s.invNo?parseInt(s.invNo.replace(/\D/g,""),10):0;
-          if(_m>_maxFromLogDup)_maxFromLogDup=_m;
-        });
-        var _newInvNo='FAT-'+String(Math.max(invCounter,_maxFromLogDup+1)).padStart(3,'0');
-        document.getElementById('inv-no').value=_newInvNo;
-        showToast(currentLang==='ar'?'✅ تم تعيين رقم فاتورة جديد: '+_newInvNo:'✅ Yeni fatura no: '+_newInvNo);
-      }
-      return;
-    }
-  }
 
   // ── التحقق من الكميات أولاً قبل أي خصم ──
   const errors=[];
@@ -10878,175 +10869,6 @@ function exportWarehousePDF(dep){
   showToast('📄 PDF');
 }
 
-// ── PDF مُجمَّع (الجميع) — يدمج نفس الصنف من كل المستودعات في سطر واحد ──
-function _buildMergedPDFHTML(title){
-  const isAr=currentLang==='ar';
-  const sp=showPriceInExport;
-  const now=new Date();
-  const dateStr=`${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
-  const timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-
-  // تجميع حسب (الاسم + العبوة) عبر كل المستودعات
-  const groups={};
-  db.filter(x=>x.qty>0).forEach(x=>{
-    const key=x.name+'||'+x.pkg;
-    if(!groups[key]) groups[key]={name:x.name,pkg:x.pkg,qty:0,price:x.price||0,deps:{}};
-    groups[key].qty+=x.qty;
-    if(!groups[key].price && x.price) groups[key].price=x.price;
-    groups[key].deps[x.dep]=(groups[key].deps[x.dep]||0)+x.qty;
-  });
-  const list=Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
-  const totalQty=list.reduce((s,x)=>s+x.qty,0);
-  const totalVal=list.reduce((s,x)=>s+x.qty*(x.price||0),0);
-
-  function statusBadge(qty){
-    if(qty===0) return `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'نفد':'Tükendi'}</span>`;
-    if(qty<=5)  return `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'منخفض':'Düşük'}</span>`;
-    return `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'جيد':'İyi'}</span>`;
-  }
-  function depBreakdown(deps){
-    return Object.keys(deps).map(d=>{
-      const wh=warehouses.find(w=>w.id==d);
-      const icon=wh?wh.icon:'🏭';
-      return `${icon}${deps[d].toLocaleString()}`;
-    }).join(' + ');
-  }
-
-  const rows=list.map((x,i)=>{
-    const alt=i%2===0?'#fff':'#f8fafc';
-    const priceCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}">${x.price>0?x.price.toFixed(2)+' ₺':'—'}</td>`:'';
-    const valCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-weight:600;color:#1F4E79">${x.price>0?(x.qty*x.price).toFixed(2)+' ₺':'—'}</td>`:'';
-    return `<tr>
-      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:#94a3b8;font-size:10px">${i+1}</td>
-      <td style="padding:6px 10px;border:1px solid #e2e8f0;background:${alt};font-weight:600;font-size:11px">${h(x.name)}</td>
-      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-size:10px">${h(x.pkg)}</td>
-      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-weight:700;font-size:12px">${x.qty.toLocaleString()}</td>
-      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-size:9px;color:#475569">${depBreakdown(x.deps)}</td>
-      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}">${statusBadge(x.qty)}</td>
-      ${priceCell}${valCell}
-    </tr>`;
-  }).join('');
-
-  const priceHdr=sp?`<th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'السعر ₺':'Fiyat ₺'}</th><th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'القيمة ₺':'Değer ₺'}</th>`:'';
-  const totalPriceCell=sp?`<td colspan="2" style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-weight:700;border:1px solid #334155">${totalVal>0?totalVal.toFixed(2)+' ₺':'—'}</td>`:'';
-  const colSpanLabel=sp?2:1;
-
-  const sectionHTML=`
-  <div style="margin-bottom:28px;page-break-inside:avoid">
-    <div style="background:linear-gradient(135deg,#6A1B9A,#7B1FA2);color:#fff;padding:12px 18px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:16px;font-weight:800">🗂️ ${isAr?'الجميع (مُجمَّع)':'Hepsi (Birleştirilmiş)'}</div>
-      <div style="font-size:12px;opacity:.85">${list.length} ${isAr?'صنف':'ürün'} &nbsp;|&nbsp; ${totalQty.toLocaleString()} ${isAr?'وحدة':'adet'}</div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-family:inherit">
-      <thead>
-        <tr>
-          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155;width:36px">#</th>
-          <th style="text-align:${isAr?'right':'left'};padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'اسم الدواء / المنتج':'İlaç Adı / Ürün'}</th>
-          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'العبوة':'Ambalaj'}</th>
-          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'الكمية الإجمالية':'Toplam Miktar'}</th>
-          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'توزيع المستودعات':'Depo Dağılımı'}</th>
-          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'الحالة':'Durum'}</th>
-          ${priceHdr}
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-      <tfoot>
-        <tr>
-          <td colspan="${3+colSpanLabel}" style="text-align:${isAr?'right':'left'};padding:8px 12px;background:#1e293b;color:#fff;font-weight:700;font-size:11px;border:1px solid #334155">
-            ${isAr?'الإجمالي':'Toplam'}
-          </td>
-          <td style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-weight:800;font-size:13px;border:1px solid #334155">${totalQty.toLocaleString()}</td>
-          ${totalPriceCell}
-        </tr>
-      </tfoot>
-    </table>
-  </div>`;
-
-  return `<!DOCTYPE html>
-<html lang="${isAr?'ar':'tr'}" dir="${isAr?'rtl':'ltr'}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${h(title)}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f1f5f9;color:#1e293b;font-size:12px;direction:${isAr?'rtl':'ltr'}}
-  .page{max-width:900px;margin:0 auto;background:#fff;padding:28px;min-height:100vh}
-  @media print{
-    body{background:#fff}
-    .page{max-width:100%;padding:16px;margin:0}
-    .no-print{display:none!important}
-    @page{margin:15mm;size:A4 portrait}
-  }
-</style>
-</head>
-<body>
-<div class="page">
-
-  <div class="no-print" style="background:#1e293b;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
-    <span style="font-weight:700">📄 ${h(title)}</span>
-    <div style="display:flex;gap:8px">
-      <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🖨️ ${isAr?'طباعة / حفظ PDF':'Yazdır / PDF Kaydet'}</button>
-      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer">✕ ${isAr?'إغلاق':'Kapat'}</button>
-    </div>
-  </div>
-
-  <div style="background:linear-gradient(135deg,#1B5E20,#2E7D32,#388E3C);color:#fff;padding:22px 24px;border-radius:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center">
-    <div>
-      <div style="font-size:22px;font-weight:900;letter-spacing:1px">🌿 Beydun Agro Sistem</div>
-      <div style="font-size:13px;opacity:.85;margin-top:4px">${isAr?'نظام إدارة المخزون الزراعي':'Tarımsal Stok Yönetim Sistemi'}</div>
-    </div>
-    <div style="text-align:${isAr?'left':'right'}">
-      <div style="font-size:11px;opacity:.8">${isAr?'تاريخ الإصدار':'Oluşturma Tarihi'}</div>
-      <div style="font-size:14px;font-weight:700">${dateStr}</div>
-      <div style="font-size:11px;opacity:.8;margin-top:2px">${timeStr}</div>
-    </div>
-  </div>
-
-  <div style="text-align:center;margin-bottom:20px">
-    <div style="font-size:18px;font-weight:800;color:#1e293b">${h(title)}</div>
-    <div style="font-size:11px;color:#64748b;margin-top:4px">${isAr?'تقرير جرد مُجمَّع لكل المستودعات — كل صنف بسطر واحد':'Tüm depolar için birleştirilmiş envanter raporu — her ürün tek satırda'}</div>
-  </div>
-
-  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
-    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:22px;font-weight:800;color:#1d4ed8">${list.length}</div>
-      <div style="font-size:10px;color:#3b82f6;margin-top:3px">${isAr?'إجمالي الأصناف':'Toplam Çeşit'}</div>
-    </div>
-    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:22px;font-weight:800;color:#16a34a">${totalQty.toLocaleString()}</div>
-      <div style="font-size:10px;color:#22c55e;margin-top:3px">${isAr?'إجمالي الوحدات':'Toplam Adet'}</div>
-    </div>
-    ${sp&&totalVal>0?`<div style="flex:1;min-width:140px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:18px;font-weight:800;color:#d97706">${totalVal.toFixed(2)} ₺</div>
-      <div style="font-size:10px;color:#f59e0b;margin-top:3px">${isAr?'إجمالي القيمة':'Toplam Değer'}</div>
-    </div>`:''}
-  </div>
-
-  ${sectionHTML}
-
-  <div style="border-top:2px solid #e2e8f0;padding-top:14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#94a3b8">
-    <span>🌿 Beydun Agro Sistem © ${now.getFullYear()}</span>
-    <span>${isAr?'تم إنشاؤه بواسطة نظام إدارة المخزون الزراعي':'Tarım İlacı Stok Yönetim Sistemi'}</span>
-    <span>${dateStr} — ${timeStr}</span>
-  </div>
-
-</div>
-</body>
-</html>`;
-}
-
-function exportMergedPDF(){
-  const isAr=currentLang==='ar';
-  const title=isAr?'تقرير الجرد المُجمَّع — الجميع':'Birleştirilmiş Stok Raporu — Hepsi';
-  const html=_buildMergedPDFHTML(title);
-  const win=window.open('','_blank');
-  if(!win){showToast(isAr?'❌ السماح بالنوافذ المنبثقة':'❌ Açılır pencerelere izin ver','err');return;}
-  win.document.write(html);
-  win.document.close();
-  showToast('📄 PDF');
-}
-
 // ── IMPORT FROM XLSX (matches the reference format) ────────────────────────
 function importStockFromXlsx(){
   _ensureXLSX(function(){ _doImportStockFromXlsx(); });
@@ -11327,6 +11149,7 @@ function openFullBackupModal() {
           <div style="padding:14px;background:#f8f9fa;border-radius:10px">
             <div style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5">${T('fbExportDesc')}</div>
             <button class="btn bp" style="width:100%;justify-content:center" onclick="exportBackup()">${T('fbExportBtn')}</button>
+            <button class="btn" style="width:100%;justify-content:center;margin-top:8px;background:#0088cc;color:#fff" onclick="shareBackup()">📨 ${isAr?'مشاركة (تلغرام والمزيد)':'Paylaş (Telegram vb.)'}</button>
             ${lastExport?`<div style="font-size:10px;color:#888;margin-top:6px;text-align:center">${isAr?'آخر تصدير':'Son dışa aktarma'}: ${lastExport}</div>`:''}
           </div>
           <div style="padding:14px;background:#fff8e1;border-radius:10px;border:1px solid #ffe082">
@@ -13367,6 +13190,9 @@ setInterval(_updateAlertsBadge, 60000);
       تصدير نسخة احتياطية
       <br><span class="mob-sheet-sub" style="font-size:10px;color:var(--gy5);font-weight:400">آخر تصدير: —</span>
     </span>
+  </button>
+  <button class="mob-sheet-btn" onclick="closeMobActions();shareBackup()">
+    <span class="mob-sheet-icon">📨</span> مشاركة (تلغرام والمزيد)
   </button>
   <button class="mob-sheet-btn" onclick="openImportFromMobile()">
     <span class="mob-sheet-icon">📥</span> استيراد نسخة احتياطية
