@@ -26,8 +26,9 @@ if (!fs.existsSync(INDEX_PATH)) fail('index.html غير موجود في ' + DIR)
 const changelog = fs.readFileSync(CHANGELOG_PATH, 'utf8');
 const indexHtml = fs.readFileSync(INDEX_PATH, 'utf8');
 
-// يبحث عن أول عنوان بصيغة: ## 🏷️ BEYDUN AGRO V<رقم>
-const changelogMatch = changelog.match(/BEYDUN AGRO V(\d+)/i);
+// يبحث عن أول عنوان فعلي بصيغة: ## 🏷️ BEYDUN AGRO V<رقم>
+// (محصور بالـ## ليتجاهل الإشارة التوضيحية لهذه الصيغة في أعلى الملف)
+const changelogMatch = changelog.match(/^##\s*🏷️?\s*BEYDUN AGRO V(\d+)/im);
 if (!changelogMatch) fail('لم يُعثر على عنوان "BEYDUN AGRO V<رقم>" في CHANGELOG.md');
 const changelogVersion = changelogMatch[1];
 

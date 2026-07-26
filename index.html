@@ -4338,7 +4338,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '1';
+var APP_VERSION = '2';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -5298,7 +5298,10 @@ function saveAll() {
 
 // تنظيف localStorage من البيانات القديمة غير الضرورية
 function _lsCleanup() {
-  var keys = ['agro_doses', 'agro_last_daily_backup', 'agro_last_weekly_backup'];
+  // ملاحظة: agro_last_daily_backup و agro_last_weekly_backup مستثناة عمداً —
+  // حجمها ضئيل جداً (تاريخ نصي) ولا تُحرر مساحة تُذكر، لكن حذفها يصفّر
+  // تتبّع "آخر نسخة احتياطية" ويُعيد تفعيل التذكير رغم أخذها فعلاً.
+  var keys = ['agro_doses'];
   keys.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
 }
 
