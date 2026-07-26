@@ -4345,7 +4345,7 @@ function _buildSnap() {
   var _doses = (typeof dosesDB !== 'undefined') ? dosesDB : [];
   var _doseHist = (typeof doseHistory !== 'undefined') ? doseHistory : [];
   // جمع إعدادات النسخ الاحتياطي
-  var _backupSettings = (typeof backupSettings !== 'undefined') ? backupSettings : {dailyEnabled:true,weeklyEnabled:true,onCloseEnabled:true};
+  var _backupSettings = (typeof backupSettings !== 'undefined') ? backupSettings : {dailyEnabled:false,weeklyEnabled:false,onCloseEnabled:true};
   return {
     schemaVersion: SCHEMA_VERSION,
     db: db.map(function(x) {
@@ -4390,7 +4390,7 @@ var _schemaMigrations = {
     if (!Array.isArray(s.suppliers))    s.suppliers    = [];
     if (s.showPriceInExport == null)    s.showPriceInExport = false;
     if (!s.backupSettings || typeof s.backupSettings !== 'object') {
-      s.backupSettings = {dailyEnabled:true, weeklyEnabled:true, onCloseEnabled:true};
+      s.backupSettings = {dailyEnabled:false, weeklyEnabled:false, onCloseEnabled:true};
     }
     return s;
   },
@@ -10961,7 +10961,7 @@ function updateMobNav(p){
 // ══════════════════════════════════════════════
 // 🔄 نظام النسخ الاحتياطي التلقائي
 // ══════════════════════════════════════════════
-let backupSettings = {dailyEnabled: true, weeklyEnabled: true, onCloseEnabled: true};
+let backupSettings = {dailyEnabled: false, weeklyEnabled: false, onCloseEnabled: true};
 
 function loadBackupSettings() {
   try {
@@ -11114,9 +11114,9 @@ function openFullBackupModal() {
 }
 
 // Initialize backup system
+// ملاحظة: تم إلغاء النسخ الاحتياطي التلقائي (يومي/أسبوعي) عند فتح البرنامج بناءً على طلب المستخدم.
+// النسخ الاحتياطي (تصدير ملف) يتم فقط عند الضغط اليدوي على زر "تصدير نسخة احتياطية".
 loadBackupSettings();
-checkDailyBackup();
-checkWeeklyBackup();
 
 // Backup on page close
 window.addEventListener('beforeunload', () => {
