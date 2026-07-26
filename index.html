@@ -1619,10 +1619,6 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
       <span class="ni">📊</span><span data-key="dashboard">لوحة التحكم</span></button>
     <button class="nav-btn" onclick="showPage('about')" id="nav-about">
       <span class="ni">🦅</span><span data-key="about">من نحن</span></button>
-    <button class="nav-btn" onclick="showPage('dose')" id="nav-dose" style="background:linear-gradient(135deg,var(--g0),#E8F5E9);border:1.5px solid var(--g1)">
-      <span class="ni">🧪</span><span data-key="navDose">حاسبة الجرعات</span></button>
-    <button class="nav-btn" onclick="showPage('drugtypes')" id="nav-drugtypes" style="background:linear-gradient(135deg,#E8EAF6,#EDE7F6);border:1.5px solid #C5CAE9">
-      <span class="ni">💊</span><span data-key="navDrugtypes">أنواع الدواء</span></button>
   </div>
   <div style="padding:0 6px">
     <div class="nav-lbl" data-key="secDeps">المستودعات</div>
@@ -1643,10 +1639,6 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     <button class="nav-btn" onclick="showPage('invoice')" id="nav-invoice"><span class="ni">🧾</span><span data-key="invoice">فاتورة عميل</span></button>
     <button class="nav-btn" onclick="showPage('sales')" id="nav-sales"><span class="ni">📈</span><span data-key="sales">جرد المبيعات</span></button>
     <button class="nav-btn" onclick="showPage('movements')" id="nav-movements"><span class="ni">🔄</span><span data-key="movements">سجل الحركات</span></button>
-    <button class="nav-btn" onclick="showPage('sprayreminder')" id="nav-sprayreminder" style="background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border:1.5px solid #A5D6A7">
-      <span class="ni">🌿</span><span data-key="sprayReminderPage">وقت العلاج</span>
-      <span class="nav-badge" id="spray-badge" style="display:none;background:#E65100">!</span>
-    </button>
   </div>
   <div style="padding:0 6px">
     <div class="nav-lbl" data-key="secMgmt">الإدارة</div>
@@ -1659,9 +1651,17 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     <button class="nav-btn" onclick="showPage('pricelist')" id="nav-pricelist"><span class="ni">🏷️</span><span data-key="pricelist">لائحة الأسعار</span></button>
     <button class="nav-btn" onclick="showPage('customers')" id="nav-customers"><span class="ni">👥</span><span data-key="customers">سجل العملاء</span></button>
     <button class="nav-btn" onclick="showPage('suppliers')" id="nav-suppliers"><span class="ni">🚚</span><span data-key="suppliers">إدارة الموردين</span></button>
-    <button class="nav-btn" onclick="showPage('purchases')" id="nav-purchases" style="background:linear-gradient(135deg,#E8EAF6,#EDE7F6);border:1.5px solid #9FA8DA"><span class="ni">📦</span><span data-key="purchases">فواتير الشراء</span></button>
+    <button class="nav-btn" onclick="showPage('purchases')" id="nav-purchases"><span class="ni">📦</span><span data-key="purchases">فواتير الشراء</span></button>
     <button class="nav-btn" onclick="showPage('products')" id="nav-products"><span class="ni">🧪</span><span data-key="products">إدارة المنتجات</span></button>
     <button class="nav-btn" onclick="openWarehouseManager()" id="nav-whmgr"><span class="ni">🏗️</span><span data-key="whmgr">إدارة المستودعات</span></button>
+    <button class="nav-btn" onclick="showPage('dose')" id="nav-dose">
+      <span class="ni">🧪</span><span data-key="navDose">حاسبة الجرعات</span></button>
+    <button class="nav-btn" onclick="showPage('drugtypes')" id="nav-drugtypes">
+      <span class="ni">💊</span><span data-key="navDrugtypes">أنواع الدواء</span></button>
+    <button class="nav-btn" onclick="showPage('sprayreminder')" id="nav-sprayreminder">
+      <span class="ni">🌿</span><span data-key="sprayReminderPage">وقت العلاج</span>
+      <span class="nav-badge" id="spray-badge" style="display:none;background:#E65100">!</span>
+    </button>
     <button class="nav-btn" onclick="openFullBackupModal()" id="nav-backupdata"><span class="ni">💾</span><span data-key="navBackupData">النسخة الاحتياطية</span></button>
   </div>
 </nav>
@@ -2440,6 +2440,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <label style="font-size:11px;color:var(--gy5)" id="lbl-low-threshold">حد المخزون المنخفض:</label>
         <input type="number" id="alert-low-threshold" value="5" min="1" max="100" style="width:60px;font-size:12px;padding:3px 6px;border-radius:5px;border:1px solid var(--gy3)" onchange="renderAlertTab()">
         <span style="font-size:11px;color:var(--gy5)" id="lbl-units">وحدة</span>
+        <button class="btn bsm" id="btn-mark-alerts-read" style="margin-inline-start:auto;background:#2E7D32;color:#fff;border:none;font-size:11px" onclick="markAlertsRead()">✅ <span id="lbl-mark-read" data-key="markRead">تمت القراءة</span></button>
       </div>
       <!-- Content -->
       <div id="alertsPanelBody" style="padding:14px;max-height:450px;overflow-y:auto"></div>
@@ -5463,62 +5464,6 @@ function exportBackup() {
   showToast(`📤 تم التصدير: ${filename}`);
 }
 
-// ── مشاركة النسخة الاحتياطية عبر قائمة مشاركة الجهاز (تلغرام → الرسائل المحفوظة، إلخ) ──
-async function shareBackup() {
-  try { if (typeof loadDosesDB === 'function') loadDosesDB(); } catch(e) {}
-  try { if (typeof loadBackupSettings === 'function') loadBackupSettings(); } catch(e) {}
-
-  var snap = null, raw = null, buildErr = null;
-  try { snap = _buildSnap(); raw = JSON.stringify(snap); } catch(e) { buildErr = e; }
-  if (!raw) {
-    showToast('❌ فشل بناء النسخة الاحتياطية: ' + (buildErr && buildErr.message ? buildErr.message : 'لا توجد بيانات'), 'err');
-    return;
-  }
-
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const datePart = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const timePart = `${pad(now.getHours())}-${pad(now.getMinutes())}`;
-  const filename = `agro_backup_${datePart}_${timePart}.json`;
-
-  // إن لم تكن مشاركة الملفات مدعومة على هذا الجهاز/المتصفح، نرجع لتصدير عادي
-  if (!(navigator.share && navigator.canShare)) {
-    showToast(currentLang==='ar' ? '⚠️ المشاركة غير مدعومة على هذا الجهاز — سيتم التصدير كملف عادي' : '⚠️ Paylaşım desteklenmiyor — dosya olarak dışa aktarılıyor', 'err');
-    exportBackup();
-    return;
-  }
-
-  try {
-    const file = new File([raw], filename, { type: 'application/json' });
-    if (!navigator.canShare({ files: [file] })) {
-      showToast(currentLang==='ar' ? '⚠️ مشاركة الملفات غير مدعومة هنا — سيتم التصدير كملف عادي' : '⚠️ Dosya paylaşımı desteklenmiyor — dışa aktarılıyor', 'err');
-      exportBackup();
-      return;
-    }
-    await navigator.share({
-      files: [file],
-      title: currentLang==='ar' ? 'نسخة احتياطية - بيدون للزراعة' : 'Yedek - Beydun Tarım',
-      text: currentLang==='ar' ? 'نسخة احتياطية بتاريخ ' + datePart : 'Yedekleme ' + datePart
-    });
-    const exportTimeStr = `${pad(now.getHours())}:${pad(now.getMinutes())} — ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
-    try { localStorage.setItem('beydun_last_export', exportTimeStr); } catch(e) {}
-    _updateExportBtn(exportTimeStr);
-    showToast(currentLang==='ar' ? '📤 تم فتح قائمة المشاركة' : '📤 Paylaşım açıldı');
-  } catch (err) {
-    if (err && err.name === 'AbortError') {
-      // المستخدم ألغى المشاركة بنفسه — لا حاجة لأي رسالة
-      return;
-    }
-    // فشل المشاركة لسبب آخر (غالبًا: التطبيق مفتوح عبر content:// وليس عبر خادم/PWA مثبّت،
-    // فيرفض النظام منح إذن الملف لتطبيق آخر برسالة "Permission denied").
-    // نتراجع تلقائيًا لحفظ الملف حتى يستطيع المستخدم إرفاقه يدويًا في تلغرام.
-    showToast(currentLang==='ar'
-      ? '⚠️ تعذّرت المشاركة المباشرة من هذا الوضع — تم حفظ الملف بدلاً من ذلك، أرفقه يدويًا في تلغرام'
-      : '⚠️ Doğrudan paylaşım başarısız — dosya kaydedildi, Telegramʼa manuel ekleyin', 'err');
-    exportBackup();
-  }
-}
-
 function _updateExportBtn(timeStr) {
   // تحديث زر التصدير في الهيدر
   const btn = document.getElementById('btn-export-bk');
@@ -5805,7 +5750,7 @@ const TX={
     chooseItem:'-- اختر الدواء --',allWh:'🏗️ جميع المستودعات',
     editQty:'✏️ تعديل الكميات',product:'المنتج',currentQty:'الكمية الحالية',newQty:'الكمية الجديدة',diff:'الفرق',
     pendingChanges:'تغيير معلّق',pendingChangesN:'تغييرات معلّقة',
-    noProducts:'لا توجد منتجات',allDepsBtn:'الكل',
+    noProducts:'لا توجد منتجات',allDepsBtn:'الكل',markRead:'تمت القراءة',
     newMed:'إضافة دواء جديد',medName:'اسم الدواء *',packaging:'التغليف *',price:'السعر (اختياري)',
     addAndSelect:'✅ إضافة وتحديد',
     medExistsSameDep:'موجود بالفعل في هذا المستودع',medExistsOtherDep:'موجود في مستودع آخر — سيُضاف لمستودعك الحالي',newMedName:'اسم جديد',
@@ -6106,7 +6051,7 @@ const TX={
     chooseItem:'-- İlaç seçin --',allWh:'🏗️ Tüm Depolar',
     editQty:'✏️ Miktarları Düzenle',product:'Ürün',currentQty:'Mevcut Miktar',newQty:'Yeni Miktar',diff:'Fark',
     pendingChanges:'bekleyen değişiklik',pendingChangesN:'bekleyen değişiklik',
-    noProducts:'Ürün yok',allDepsBtn:'Tümü',
+    noProducts:'Ürün yok',allDepsBtn:'Tümü',markRead:'Okundu',
     newMed:'Yeni İlaç Ekle',medName:'İlaç Adı *',packaging:'Ambalaj *',price:'Fiyat (isteğe bağlı)',
     addAndSelect:'✅ Ekle ve Seç',
     medExistsSameDep:'Bu depoda zaten mevcut',medExistsOtherDep:'Başka depoda mevcut — mevcut depona eklenecek',newMedName:'Yeni isim',
@@ -8104,7 +8049,7 @@ function renderDashboard(){
     <div class="al ala" style="margin-bottom:6px;font-size:11px;padding:7px 10px">
       <span>💰</span><strong>${h(x.name)}</strong><span style="color:var(--gy5);margin-right:4px">(${h(depN(x.dep))})</span>
     </div>`).join('')+(np.length>8?`<div style="text-align:center;color:var(--gy5);font-size:11px">+${np.length-8}...</div>`:'');
-  const recent=[...movements,...returnsLog.map(r=>({date:r.date,name:r.name,type:'مرتجع',qty:r.qty}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
+  const recent=[...[...movements].reverse(),...returnsLog.slice().reverse().map(r=>({date:r.date,name:r.name,type:'مرتجع',qty:r.qty}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
   document.getElementById('dashMov').innerHTML=recent.length?
     '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
     recent.map(m=>{const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
@@ -11149,7 +11094,6 @@ function openFullBackupModal() {
           <div style="padding:14px;background:#f8f9fa;border-radius:10px">
             <div style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5">${T('fbExportDesc')}</div>
             <button class="btn bp" style="width:100%;justify-content:center" onclick="exportBackup()">${T('fbExportBtn')}</button>
-            <button class="btn" style="width:100%;justify-content:center;margin-top:8px;background:#0088cc;color:#fff" onclick="shareBackup()">📨 ${isAr?'مشاركة (تلغرام والمزيد)':'Paylaş (Telegram vb.)'}</button>
             ${lastExport?`<div style="font-size:10px;color:#888;margin-top:6px;text-align:center">${isAr?'آخر تصدير':'Son dışa aktarma'}: ${lastExport}</div>`:''}
           </div>
           <div style="padding:14px;background:#fff8e1;border-radius:10px;border:1px solid #ffe082">
@@ -11612,10 +11556,20 @@ function openCustomerHistory(encodedName){
       <span style="color:var(--gy5)">${isAr?'عميل منذ':'Kayıt'}: ${fmtDate(reg.createdAt||'—')}</span>
     </div>` : ''}
     <!-- Invoices history -->
-    <div style="padding:12px 16px 4px;font-size:12px;font-weight:700;color:var(--gy7)">${isAr?'📜 سجل الفواتير':'📜 Fatura Geçmişi'}</div>
+    <div style="padding:12px 16px 4px;font-size:12px;font-weight:700;color:var(--gy7);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span>${isAr?'📜 سجل الفواتير':'📜 Fatura Geçmişi'}</span>
+      <div style="display:flex;align-items:center;gap:12px;font-weight:400">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:var(--gy7)">
+          <input type="checkbox" id="custInvSelAll" onchange="_toggleCustInvSelectAll(this.checked)">
+          ${isAr?'تحديد الكل':'Tümünü Seç'}
+        </label>
+        <span id="custInvSelTotal" style="font-size:12px;font-weight:700;color:var(--g8)"></span>
+      </div>
+    </div>
     ${invList.map(inv=>`
       <div style="margin:0 14px 10px;border:1px solid var(--gy2);border-radius:8px;overflow:hidden">
-        <div style="background:linear-gradient(to left,#37474F,#546E7A);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;font-size:12px">
+        <div style="background:linear-gradient(to left,#37474F,#546E7A);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:6px;flex-wrap:wrap">
+          <input type="checkbox" class="cust-inv-chk" data-inv="${h(inv.invNo)}" data-total="${inv.total}" onchange="_updateCustInvSelTotal()" style="width:15px;height:15px;cursor:pointer">
           <strong>${inv.invNo}</strong>
           <span>${fmtDate(inv.date)}</span>
           <span class="bdg ba" style="font-size:10px">${inv.region||'—'}</span>
@@ -11639,6 +11593,22 @@ function openCustomerHistory(encodedName){
     <div style="height:16px"></div>`;
 
   document.getElementById('custHistModal').classList.remove('hidden');
+}
+
+function _toggleCustInvSelectAll(checked){
+  document.querySelectorAll('.cust-inv-chk').forEach(function(c){ c.checked = checked; });
+  _updateCustInvSelTotal();
+}
+function _updateCustInvSelTotal(){
+  const isAr = currentLang==='ar';
+  const all = document.querySelectorAll('.cust-inv-chk');
+  const checked = document.querySelectorAll('.cust-inv-chk:checked');
+  let total = 0;
+  checked.forEach(function(c){ total += parseFloat(c.getAttribute('data-total'))||0; });
+  const el = document.getElementById('custInvSelTotal');
+  if(el) el.textContent = checked.length ? `${isAr?'إجمالي المحدد':'Seçili Toplam'} (${checked.length}): ${numFmt(total)} ₺` : '';
+  const selAll = document.getElementById('custInvSelAll');
+  if(selAll) selAll.checked = all.length>0 && checked.length===all.length;
 }
 
 function submitCustomer(){
@@ -12964,7 +12934,7 @@ function _calcAlerts() {
   db.forEach(function(x){
     if(!x.expiry) return;
     var diff = Math.ceil((new Date(x.expiry)-new Date(today))/(1000*60*60*24));
-    if(diff <= 60) expiryAlerts.push({name:x.name, pkg:x.pkg, dep:x.dep, date:x.expiry, diff:diff, type:'drug'});
+    if(diff <= 60) expiryAlerts.push({id:x.id, name:x.name, pkg:x.pkg, dep:x.dep, date:x.expiry, diff:diff, type:'drug'});
   });
   try {
     if (typeof sprayReminders !== 'undefined') {
@@ -12992,17 +12962,44 @@ function _calcAlerts() {
   return {lowItems:lowItems, outItems:outItems, expiryAlerts:expiryAlerts, debtItems:debtItems};
 }
 
+function _getReadAlertKeys() {
+  try { return JSON.parse(localStorage.getItem('beydun_alerts_read')||'[]'); } catch(e) { return []; }
+}
+function _saveReadAlertKeys(arr) {
+  try { localStorage.setItem('beydun_alerts_read', JSON.stringify(arr)); } catch(e) {}
+}
+function _buildAlertKeys(data) {
+  var keys = [];
+  data.lowItems.concat(data.outItems).forEach(function(x){ keys.push('stock:'+x.id); });
+  data.expiryAlerts.forEach(function(x){ keys.push('exp:'+(x.id!=null?x.id:(x.name+'|'+x.pkg+'|'+x.date))); });
+  data.debtItems.forEach(function(x){ keys.push('debt:'+x.invNo); });
+  return keys;
+}
+
 function _updateAlertsBadge() {
-  var threshold = parseInt((document.getElementById('alert-low-threshold')||{value:'5'}).value)||5;
-  var lowCount = db.filter(function(x){ return (x.qty<=threshold&&x.qty>=0)||x.outOfStock; }).length;
+  var data = _calcAlerts();
+  var readSet = {};
+  _getReadAlertKeys().forEach(function(k){ readSet[k]=true; });
+  var unreadCount = _buildAlertKeys(data).filter(function(k){ return !readSet[k]; }).length;
   var badge = document.getElementById('alerts-bell-badge');
   if (badge) {
-    if (lowCount>0) { badge.style.display='block'; badge.textContent=lowCount>99?'99+':lowCount; }
+    if (unreadCount>0) { badge.style.display='block'; badge.textContent=unreadCount>99?'99+':unreadCount; }
     else { badge.style.display='none'; }
   }
   // Also update dashboard alert count
   var dashCnt = document.getElementById('alertCnt');
-  if (dashCnt) dashCnt.textContent = lowCount;
+  if (dashCnt) dashCnt.textContent = unreadCount;
+}
+
+function markAlertsRead() {
+  var data = _calcAlerts();
+  var readSet = {};
+  _getReadAlertKeys().forEach(function(k){ readSet[k]=true; });
+  _buildAlertKeys(data).forEach(function(k){ readSet[k]=true; });
+  _saveReadAlertKeys(Object.keys(readSet));
+  _updateAlertsBadge();
+  renderAlertTab();
+  showToast(currentLang==='ar' ? '✅ تمت القراءة' : '✅ Okundu olarak işaretlendi');
 }
 
 function openAlertsPanel() {
@@ -13190,9 +13187,6 @@ setInterval(_updateAlertsBadge, 60000);
       تصدير نسخة احتياطية
       <br><span class="mob-sheet-sub" style="font-size:10px;color:var(--gy5);font-weight:400">آخر تصدير: —</span>
     </span>
-  </button>
-  <button class="mob-sheet-btn" onclick="closeMobActions();shareBackup()">
-    <span class="mob-sheet-icon">📨</span> مشاركة (تلغرام والمزيد)
   </button>
   <button class="mob-sheet-btn" onclick="openImportFromMobile()">
     <span class="mob-sheet-icon">📥</span> استيراد نسخة احتياطية
