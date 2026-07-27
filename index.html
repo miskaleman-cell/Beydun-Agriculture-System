@@ -1589,6 +1589,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
       <button class="mob-menu-btn" onclick="toggleMobMenu()" id="mob-menu-btn" aria-label="القائمة">☰</button>
       <button onclick="openAlertsPanel()" id="btn-alerts-bell" title="التنبيهات" style="position:relative;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:5px 10px;font-size:14px;cursor:pointer">🔔<span id="alerts-bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;line-height:16px;text-align:center;font-weight:700"></span></button>
       <button class="btn bgold bsm" onclick="openBackupModal()" id="btn-backup" title="إعدادات النسخ الاحتياطي" style="font-size:11px">🔄 نسخ احتياطي</button>
+      <button class="btn bsm" onclick="openCompanyInfoModal()" id="btn-company-info" title="بيانات الشركة (تظهر في الفواتير)" style="font-size:11px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)">🏢 بيانات الشركة</button>
       <button id="btn-embed-save" class="btn bsm" onclick="embedSave()" title="حفظ البيانات مباشرة داخل الملف" style="font-size:11px;background:linear-gradient(135deg,rgba(201,168,76,.9),rgba(184,150,12,.9));color:#fff;border:1px solid rgba(201,168,76,.7);font-weight:700">💾 حفظ داخل الملف</button>
       <button class="btn bsm" onclick="linkFileForSaving()" title="ربط الملف للحفظ داخله" style="font-size:11px;background:rgba(76,175,80,.3);color:#fff;border:1px solid rgba(76,175,80,.6)">🔗 ربط الملف</button>
       <span id="save-ind" onclick="linkFileForSaving()" style="font-size:10px;padding:4px 10px;border-radius:20px;cursor:pointer;color:#fff;border:1px solid rgba(255,255,255,.25);white-space:nowrap;background:rgba(245,158,11,.4)" title="حالة الحفظ">⚠️ --:--</span>
@@ -4338,7 +4339,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '2';
+var APP_VERSION = '3';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -9572,6 +9573,9 @@ function printInvoice(){
   if(!validRows.length){showToast(currentLang==='ar'?'⚠️ الفاتورة فارغة':'⚠️ Fatura boş','err');return;}
   const sub = validRows.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);
   const isAr = currentLang==='ar';
+  const coName = getCompanyName();
+  const coPhone = getCompanyPhone();
+  const coEmail = getCompanyEmail();
 
   const rowsHtml = validRows.map((r,i)=>`
     <tr>
@@ -9618,7 +9622,7 @@ tr:nth-child(even) td{background:#f9f9f9}
 </head>
 <body>
 <div class="top">
-  <div class="company">🦅 BEYDUN Agriculture<small>📞 0553 674 71 47 &nbsp;|&nbsp; mbeydun7@gmail.com</small></div>
+  <div class="company">🦅 ${coName}<small>📞 ${coPhone} &nbsp;|&nbsp; ${coEmail}</small></div>
   <div class="inv-info">
     <div class="inv-no">${invNo}</div>
     <div>${fmtDate(date)}</div>
@@ -9686,8 +9690,9 @@ function sendInvoiceWhatsApp(invNo) {
   var total    = rows.reduce(function(s,r){ return s+r.qty*r.price*(1-r.disc/100); }, 0);
 
   // ── نص الفاتورة بالتركية كاملاً ─────────────────
+  var coName = getCompanyName();
   var lines = [];
-  lines.push('🌿 *Beydun Agro*');
+  lines.push('🌿 *' + coName + '*');
   lines.push('━━━━━━━━━━━━━━━━━━━━');
   lines.push('🧾 *Fatura No:* ' + invNo);
   lines.push('📅 *Tarih:* ' + fmtDate(date));
@@ -9703,7 +9708,7 @@ function sendInvoiceWhatsApp(invNo) {
   lines.push('💰 *TOPLAM: ' + numFmt(total) + ' ₺*');
   lines.push('━━━━━━━━━━━━━━━━━━━━');
   lines.push('🙏 Alışverişiniz için teşekkür ederiz!');
-  lines.push('_Beydun Agro 🌱_');
+  lines.push('_' + coName + ' 🌱_');
 
   // ── ابحث عن رقم العميل المسجل ───────────────────
   var reg   = customers.find(function(c){ return c.name===customer; });
@@ -10975,6 +10980,78 @@ function loadBackupSettings() {
 
 function saveBackupSettings() {
   localStorage.setItem('agro_backup_settings', JSON.stringify(backupSettings));
+}
+
+// ══════════════════════════════════════════════
+// 🏢 بيانات الشركة — تُستخدم في فواتير الواتساب والطباعة
+// ══════════════════════════════════════════════
+let companyInfo = {name:'', phone:'', email:''};
+
+function loadCompanyInfo() {
+  try {
+    const s = localStorage.getItem('agro_company_info');
+    if (s) companyInfo = {...companyInfo, ...JSON.parse(s)};
+  } catch(e) {}
+}
+
+function saveCompanyInfo() {
+  localStorage.setItem('agro_company_info', JSON.stringify(companyInfo));
+}
+
+function getCompanyName() {
+  loadCompanyInfo();
+  return (companyInfo.name && companyInfo.name.trim()) || 'Beydun Agro';
+}
+
+function getCompanyPhone() {
+  loadCompanyInfo();
+  return (companyInfo.phone && companyInfo.phone.trim()) || '0553 674 71 47';
+}
+
+function getCompanyEmail() {
+  loadCompanyInfo();
+  return (companyInfo.email && companyInfo.email.trim()) || 'mbeydun7@gmail.com';
+}
+
+function openCompanyInfoModal() {
+  var existing = document.getElementById('companyInfoModal');
+  if (existing) { existing.remove(); }
+  loadCompanyInfo();
+  const isAr = currentLang==='ar';
+  const modal = document.createElement('div');
+  modal.className = 'mo';
+  modal.id = 'companyInfoModal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:420px">
+      <div class="mh" style="background:linear-gradient(135deg,#1B5E20,#2E7D32)">
+        <h3>🏢 ${isAr?'بيانات الشركة':'Şirket Bilgileri'}</h3>
+        <button class="mc" onclick="document.getElementById('companyInfoModal').remove();document.body.style.overflow=''">✕</button>
+      </div>
+      <div class="mb">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:11px;color:#666">${isAr?'هذه البيانات تظهر في فاتورة الواتساب والفاتورة المطبوعة/PDF. اتركها فارغة لاستخدام القيم الافتراضية.':'Bu bilgiler WhatsApp faturasında ve yazdırılan/PDF faturada görünür. Varsayılanları kullanmak için boş bırakın.'}</div>
+          <label style="font-size:12px;font-weight:700">${isAr?'اسم الشركة':'Şirket Adı'}
+            <input type="text" id="ci-name" value="${(companyInfo.name||'').replace(/"/g,'&quot;')}" placeholder="Beydun Agro" style="width:100%;margin-top:4px;padding:9px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          </label>
+          <label style="font-size:12px;font-weight:700">${isAr?'رقم الهاتف':'Telefon'}
+            <input type="text" id="ci-phone" value="${(companyInfo.phone||'').replace(/"/g,'&quot;')}" placeholder="0553 674 71 47" style="width:100%;margin-top:4px;padding:9px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          </label>
+          <label style="font-size:12px;font-weight:700">${isAr?'البريد الإلكتروني':'E-posta'}
+            <input type="text" id="ci-email" value="${(companyInfo.email||'').replace(/"/g,'&quot;')}" placeholder="mail@example.com" style="width:100%;margin-top:4px;padding:9px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          </label>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bp" onclick="companyInfo.name=document.getElementById('ci-name').value;companyInfo.phone=document.getElementById('ci-phone').value;companyInfo.email=document.getElementById('ci-email').value;saveCompanyInfo();showToast('✅');document.getElementById('companyInfoModal').remove();document.body.style.overflow=''">
+            💾 ${T('saveChanges').replace('💾 ','')}
+          </button>
+          <button class="btn bs" onclick="document.getElementById('companyInfoModal').remove();document.body.style.overflow=''">
+            ${T('cancel')}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
 }
 
 function performAutoBackup(reason) {
@@ -13108,8 +13185,9 @@ function shareInvoiceWhatsApp() {
   var sub = validRows.reduce(function(s,r){ return s+r.qty*r.price*(1-r.disc/100); },0);
   var isAr = currentLang==='ar';
 
+  var coName = getCompanyName();
   var lines = [];
-  lines.push('🦅 *Beydun Agriculture System*');
+  lines.push('🦅 *' + coName + '*');
   lines.push('━━━━━━━━━━━━━━━');
   lines.push((isAr?'🧾 فاتورة رقم: ':'🧾 Fatura No: ')+invNo);
   lines.push((isAr?'📅 التاريخ: ':'📅 Tarih: ')+fmtDate(date));
@@ -13124,7 +13202,7 @@ function shareInvoiceWhatsApp() {
   lines.push('*'+(isAr?'الإجمالي: ':'Toplam: ')+numFmt(sub)+' ₺*');
   if (notes) lines.push('📝 '+notes);
   lines.push('');
-  lines.push('_Beydun Agriculture System_');
+  lines.push('_' + coName + '_');
 
   var text = lines.join('\n');
   var url = 'https://wa.me/?text='+encodeURIComponent(text);
@@ -13177,6 +13255,9 @@ setInterval(_updateAlertsBadge, 60000);
   <div class="mob-sheet-title" id="mob-sheet-main-title">⚙️ الإجراءات</div>
   <button class="mob-sheet-btn" onclick="closeMobActions();openBackupModal()">
     <span class="mob-sheet-icon">🔄</span> نسخ احتياطي
+  </button>
+  <button class="mob-sheet-btn" onclick="closeMobActions();openCompanyInfoModal()">
+    <span class="mob-sheet-icon">🏢</span> بيانات الشركة
   </button>
   <button class="mob-sheet-btn" onclick="closeMobActions();embedSave()">
     <span class="mob-sheet-icon">💾</span> حفظ داخل الملف
