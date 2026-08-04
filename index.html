@@ -1776,6 +1776,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <button class="btn bsm" style="background:var(--p1);color:var(--p9)" onclick="filterAllBy(3)" id="b-d3">م.الثالث</button>
         <button class="btn bxl bsm" onclick="exportStockExcel()" id="b-exp-all">📥 Excel</button>
         <button class="btn bsm" onclick="exportStockPDF()" id="b-exp-all-pdf" style="background:#c0392b;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px">📄 PDF</button>
+        <button class="btn bsm" onclick="exportCombinedStockExcel()" id="b-exp-all-combined" style="background:#6A1B9A;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px" data-key="combinedExport">📊 Excel مجمّع</button>
         <button class="btn bsm" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);font-size:11px" onclick="openQtyEditor(null)" id="b-qty-editor">✏️ تعديل الكميات</button>
         <button class="btn bsm" id="b-all-hideout" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);font-size:11px" onclick="toggleAllHideOut()">🙈</button>
       </div>
@@ -4339,7 +4340,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '3';
+var APP_VERSION = '4';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -5736,6 +5737,8 @@ const TX={
     priceVisible:'الأسعار مرئية ✓',priceHidden:'الأسعار مخفية ✗',
     tblStock:['#','اسم الدواء','التغليف','المستودع','الكمية','السعر ₺','القيمة ₺'],
     tblWh:['#','اسم الدواء','التغليف','الكمية','السعر ₺','القيمة ₺'],
+    combinedExport:'📊 Excel مجمّع',combinedSheetTitle:'الأدوية المجمّعة',
+    tblCombined:['#','اسم الدواء','التغليف','الكمية الإجمالية','تفصيل المستودعات','السعر ₺','القيمة ₺'],
     tblRet:['التاريخ','الزبون','الدواء','الكمية','الفاتورة','السبب'],
     tblInv:['#','اسم الدواء','العبوة','الكمية','سعر الوحدة ₺','خصم %','الإجمالي ₺',''],
     tblSales:['التاريخ','الفاتورة','العميل','المنطقة','الدواء','الكمية','السعر','خصم%','الإجمالي ₺','⚙️'],
@@ -6037,6 +6040,8 @@ const TX={
     priceVisible:'Fiyatlar görünür ✓',priceHidden:'Fiyatlar gizli ✗',
     tblStock:['#','İLAÇ ADI','AMBALAJ','DEPO','TOPLAM','FİYAT ₺','DEĞER ₺'],
     tblWh:['#','İLAÇ ADI','AMBALAJ','TOPLAM','FİYAT ₺','DEĞER ₺'],
+    combinedExport:'📊 Birleşik Excel',combinedSheetTitle:'Birleştirilmiş İlaçlar',
+    tblCombined:['#','İLAÇ ADI','AMBALAJ','TOPLAM MİKTAR','Depo Detayı','FİYAT ₺','DEĞER ₺'],
     tblRet:['Tarih','Müşteri','İlaç','Miktar','Fatura','Sebep'],
     tblInv:['#','İlaç Adı','Ambalaj','Miktar','Birim Fiyat ₺','İndirim %','Toplam ₺',''],
     tblSales:['Tarih','Fatura','Müşteri','Bölge','İlaç','Miktar','Fiyat','İndirim%','Toplam ₺','⚙️'],
@@ -10617,6 +10622,111 @@ function exportStockExcel(){
     });
     dlXlsx(wb2,`${currentLang==='tr'?'tam_stok_raporu':'جرد_كامل'}_${todayStr()}.xlsx`);
     showToast('📥 Excel');
+  });
+}
+
+function _buildCombinedRows(){
+  const map=new Map();
+  db.forEach(x=>{
+    if(!(x.qty>0)) return;
+    const key=norm(x.name)+'||'+norm(x.pkg);
+    if(!map.has(key)) map.set(key,{name:x.name,pkg:x.pkg,qtyTotal:0,perDep:{},prices:[]});
+    const e=map.get(key);
+    e.qtyTotal+=x.qty;
+    e.perDep[x.dep]=(e.perDep[x.dep]||0)+x.qty;
+    if(x.price>0) e.prices.push(x.price);
+  });
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+}
+
+function _combinedDepDetail(perDep){
+  return [1,2,3].filter(d=>perDep[d]>0).map(d=>`${depN(d)}: ${perDep[d]}`).join('  |  ');
+}
+
+function _buildCombinedSheet(showPrice){
+  const isAr=currentLang==='ar';
+  const sheetTitle=T('combinedSheetTitle');
+  const hdrColor='6A1B9A';
+  const list=_buildCombinedRows();
+  const total=list.reduce((s,x)=>s+x.qtyTotal,0);
+
+  const hdrStyle={
+    font:{bold:true,sz:11,color:{rgb:'FFFFFFFF'}},
+    fill:{patternType:'solid',fgColor:{rgb:'FF'+hdrColor}},
+    alignment:{horizontal:'center',vertical:'center'},
+    border:{top:{style:'thin',color:{rgb:'FFBFBFBF'}},bottom:{style:'thin',color:{rgb:'FFBFBFBF'}},
+            left:{style:'thin',color:{rgb:'FFBFBFBF'}},right:{style:'thin',color:{rgb:'FFBFBFBF'}}}
+  };
+  const titleStyle={
+    font:{bold:true,sz:14,color:{rgb:'FFFFFFFF'}},
+    fill:{patternType:'solid',fgColor:{rgb:'FF'+hdrColor}},
+    alignment:{horizontal:'center',vertical:'center'}
+  };
+  const totalStyle={
+    font:{bold:true,sz:11,color:{rgb:'FFFFFFFF'}},
+    fill:{patternType:'solid',fgColor:{rgb:'FF'+hdrColor}},
+    alignment:{horizontal:'center',vertical:'center'}
+  };
+  const dataStyle={
+    font:{sz:10},
+    fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
+    alignment:{horizontal:'center',vertical:'center'},
+    border:{top:{style:'thin',color:{rgb:'FFBFBFBF'}},bottom:{style:'thin',color:{rgb:'FFBFBFBF'}},
+            left:{style:'thin',color:{rgb:'FFBFBFBF'}},right:{style:'thin',color:{rgb:'FFBFBFBF'}}}
+  };
+  const dataNameStyle={...dataStyle,alignment:{horizontal:isAr?'right':'left',vertical:'center'}};
+  const dataDetailStyle={...dataStyle,font:{sz:9},alignment:{horizontal:isAr?'right':'left',vertical:'center'}};
+
+  const cols=showPrice?7:5;
+  const aoa=[];
+  aoa.push([sheetTitle,'','','','',...(showPrice?['','']:[])]); // row1 title
+  aoa.push(['','','','','',...(showPrice?['','']:[])]); // row2 spacer
+  const tblC=T('tblCombined'); // ['#',name,pkg,qtyTotal,depDetail,price,value]
+  const hRow=showPrice?tblC.slice(0,7):[tblC[0],tblC[1],tblC[2],tblC[3],tblC[4]];
+  aoa.push(hRow); // row3
+  list.forEach((x,i)=>{
+    const price=x.prices.length?Math.max(...x.prices):0;
+    aoa.push([i+1,x.name,x.pkg,x.qtyTotal,_combinedDepDetail(x.perDep),...(showPrice?[price,x.qtyTotal*price]:[])]);
+  });
+  const totRow=[isAr?'الإجمالي الكلي':'Genel Toplam','','',total,'',...(showPrice?['',list.reduce((s,x)=>s+x.qtyTotal*(x.prices.length?Math.max(...x.prices):0),0)]:[])];
+  aoa.push(totRow);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:6},{wch:30},{wch:16},{wch:14},{wch:34},...(showPrice?[{wch:14},{wch:14}]:[])];
+  ws['!rows']=[{hpt:28},{hpt:6},{hpt:22},...list.map(()=>({hpt:18})),{hpt:20}];
+  const lastCol=showPrice?6:4;
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:lastCol}},
+    {s:{r:aoa.length-1,c:0},e:{r:aoa.length-1,c:2}}
+  ];
+
+  const R=aoa.length;
+  const C=cols;
+  for(let r=0;r<R;r++){
+    for(let c=0;c<C;c++){
+      const addr=XLSX.utils.encode_cell({r,c});
+      if(!ws[addr]) ws[addr]={t:'z',v:''};
+      if(r===0){ ws[addr].s=titleStyle; }
+      else if(r===1){ ws[addr].s={fill:{patternType:'solid',fgColor:{rgb:'FF'+hdrColor}}}; }
+      else if(r===2){ ws[addr].s=hdrStyle; }
+      else if(r===R-1){ ws[addr].s=totalStyle; }
+      else if(c===1){ ws[addr].s=dataNameStyle; }
+      else if(c===4){ ws[addr].s=dataDetailStyle; }
+      else{ ws[addr].s=dataStyle; }
+    }
+  }
+
+  return {ws,sheetTitle};
+}
+
+function exportCombinedStockExcel(){
+  _ensureXLSX(function(){
+    const sp=showPriceInExport;
+    const {ws,sheetTitle}=_buildCombinedSheet(sp);
+    const wb2=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb2,ws,sheetTitle.substring(0,31));
+    dlXlsx(wb2,`${currentLang==='tr'?'birlesik_stok':'الادوية_المجمعة'}_${todayStr()}.xlsx`);
+    showToast('📊 '+sheetTitle);
   });
 }
 
