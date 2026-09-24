@@ -1776,7 +1776,10 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <button class="btn bsm" style="background:var(--p1);color:var(--p9)" onclick="filterAllBy(3)" id="b-d3">م.الثالث</button>
         <button class="btn bxl bsm" onclick="exportStockExcel()" id="b-exp-all">📥 Excel</button>
         <button class="btn bsm" onclick="exportCombinedStockExcel()" id="b-exp-all-combined" style="background:#00695C;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px" title="ملف واحد: دواء + عبوة + الكمية بكل مستودع + الإجمالي">📊 تقرير مجمّع</button>
+        <button class="btn bsm" onclick="exportCombinedStockPDF()" id="b-exp-all-combined-pdf" style="background:#8E24AA;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px" title="تقرير PDF ملوّن بنفس التجميع: دواء + عبوة + الكمية بكل مستودع + الإجمالي">📊 تقرير مجمّع PDF</button>
         <button class="btn bsm" onclick="exportStockPDF()" id="b-exp-all-pdf" style="background:#c0392b;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px">📄 PDF</button>
+        <button class="btn bsm" onclick="exportOutOfStockExcel()" id="b-exp-out-excel" style="background:#B71C1C;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px" title="قائمة بكل الأدوية التي كميتها الحالية صفر — تختفي تلقائياً من هذه القائمة بمجرد إضافة كمية جديدة">🚫 الأدوية المنتهية</button>
+        <button class="btn bsm" onclick="exportOutOfStockPDF()" id="b-exp-out-pdf" style="background:#D84315;color:#fff;border:none;font-size:11px;font-weight:700;border-radius:8px;padding:5px 10px" title="قائمة بكل الأدوية التي كميتها الحالية صفر — تختفي تلقائياً من هذه القائمة بمجرد إضافة كمية جديدة">🚫 الأدوية المنتهية PDF</button>
         <button class="btn bsm" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);font-size:11px" onclick="openQtyEditor(null)" id="b-qty-editor">✏️ تعديل الكميات</button>
         <button class="btn bsm" id="b-all-hideout" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);font-size:11px" onclick="toggleAllHideOut()">🙈</button>
       </div>
@@ -4340,7 +4343,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '5';
+var APP_VERSION = '7';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -6689,9 +6692,16 @@ function setLang(lang){
   // تحديث زر تعديل الكميات في صفحة الكل
   const qeAllBtn=document.getElementById('b-qty-editor');
   if(qeAllBtn)qeAllBtn.textContent=T('editQty');
-  // زر التقرير المجمّع في صفحة الكل
+  // زر التقرير المجمّع (Excel و PDF) في صفحة الكل
   const combBtn=document.getElementById('b-exp-all-combined');
   if(combBtn)combBtn.textContent=lang==='tr'?'📊 Birleşik Rapor':'📊 تقرير مجمّع';
+  const combPdfBtn=document.getElementById('b-exp-all-combined-pdf');
+  if(combPdfBtn)combPdfBtn.textContent=lang==='tr'?'📊 Birleşik Rapor PDF':'📊 تقرير مجمّع PDF';
+  // زرا الأدوية المنتهية في صفحة الكل
+  const outExcBtn=document.getElementById('b-exp-out-excel');
+  if(outExcBtn)outExcBtn.textContent=lang==='tr'?'🚫 Tükenen İlaçlar':'🚫 الأدوية المنتهية';
+  const outPdfBtn=document.getElementById('b-exp-out-pdf');
+  if(outPdfBtn)outPdfBtn.textContent=lang==='tr'?'🚫 Tükenen İlaçlar PDF':'🚫 الأدوية المنتهية PDF';
   // Rights label
   const lblRights=document.getElementById('lbl-rights');
   if(lblRights)lblRights.textContent=T('allRights');
@@ -8264,7 +8274,13 @@ function filterWarehouse(dep){
   _renderWhBody(dep, filtered, 0, 200);
 }
 function getWhHideOut(){
-  try { return localStorage.getItem('beydun_wh_hide_out')==='1'; } catch(e){ return false; }
+  // الافتراضي: إخفاء الأدوية المنتهية (qty=0) في البحث/عرض المستودعات ما لم يختر المستخدم صراحة إظهارها.
+  // (لعرضها بشكل رسمي، استخدم زرّي "الأدوية المنتهية" Excel/PDF بدلاً من ذلك)
+  try {
+    const v = localStorage.getItem('beydun_wh_hide_out');
+    if(v===null) return true;
+    return v==='1';
+  } catch(e){ return true; }
 }
 function setWhHideOut(val){
   try { localStorage.setItem('beydun_wh_hide_out', val?'1':'0'); } catch(e){}
@@ -10681,21 +10697,32 @@ function exportStockExcel(){
   });
 }
 
+// تجميع الأصناف حسب (الاسم + العبوة) عبر كل المستودعات — مصدر مشترك لتصدير Excel و PDF المجمّعين
+// ملاحظة: الأصناف المنتهية بالكامل (الإجمالي = صفر في كل المستودعات) تُستبعد هنا تلقائياً،
+// تماماً كما تُستبعد الأصناف الفارغة من تقارير كل مستودع على حدة — استخدم زرّي
+// "الأدوية المنتهية" (Excel/PDF) للحصول على قائمتها.
+function _getCombinedStockGroups(){
+  const map=new Map();
+  db.forEach(x=>{
+    const key=x.name+'␟'+x.pkg;
+    if(!map.has(key)) map.set(key,{name:x.name,pkg:x.pkg,price:x.price||0,byDep:{},total:0});
+    const g=map.get(key);
+    g.byDep[x.dep]=(g.byDep[x.dep]||0)+(Number(x.qty)||0);
+    g.total+=(Number(x.qty)||0);
+    if(!g.price&&x.price) g.price=x.price;
+  });
+  return [...map.values()].filter(g=>g.total>0).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+}
+// قائمة الأدوية المنتهية (qty=0) عبر كل المستودعات — مبنية حيّاً من المخزون الحالي،
+// فتختفي تلقائياً بمجرد إضافة كمية جديدة لأي صنف منها (لا حاجة لأي تحديث يدوي).
+function _getOutOfStockItems(){
+  return db.filter(x=>Number(x.qty)===0).slice().sort((a,b)=>a.name.localeCompare(b.name,'tr')||a.pkg.localeCompare(b.pkg,'tr'));
+}
 function exportCombinedStockExcel(){
   _ensureXLSX(function(){
     const isAr=currentLang==='ar';
     const sp=showPriceInExport;
-    // تجميع الأصناف حسب (الاسم + العبوة) عبر كل المستودعات
-    const map=new Map();
-    db.forEach(x=>{
-      const key=x.name+'␟'+x.pkg;
-      if(!map.has(key)) map.set(key,{name:x.name,pkg:x.pkg,price:x.price||0,byDep:{},total:0});
-      const g=map.get(key);
-      g.byDep[x.dep]=(g.byDep[x.dep]||0)+(Number(x.qty)||0);
-      g.total+=(Number(x.qty)||0);
-      if(!g.price&&x.price) g.price=x.price;
-    });
-    const groups=[...map.values()].sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+    const groups=_getCombinedStockGroups();
     const whHeaders=warehouses.map(w=>isAr?w.nameAr:w.nameTr);
     const headers=['#',isAr?'اسم الدواء':'İlaç Adı',isAr?'العبوة':'Ambalaj',...whHeaders,isAr?'الإجمالي':'Toplam'];
     if(sp) headers.push(isAr?'السعر':'Fiyat');
@@ -10904,6 +10931,340 @@ function exportWarehousePDF(dep){
   const wh=warehouses.find(x=>x.id===dep)||{nameAr:'المستودع',nameTr:'Depo'};
   const title=(isAr?wh.nameAr:wh.nameTr)+(isAr?' — تقرير الجرد':' — Stok Raporu');
   const html=_buildPDFHTML([dep],title);
+  const win=window.open('','_blank');
+  if(!win){showToast(isAr?'❌ السماح بالنوافذ المنبثقة':'❌ Açılır pencerelere izin ver','err');return;}
+  win.document.write(html);
+  win.document.close();
+  showToast('📄 PDF');
+}
+
+// ══════════════════════════════════════════════
+// 📊 PDF — التقرير المجمّع (صف واحد لكل صنف عبر كل المستودعات)
+// ══════════════════════════════════════════════
+function _buildCombinedPDFHTML(title){
+  const isAr=currentLang==='ar';
+  const sp=showPriceInExport;
+  const now=new Date();
+  const dateStr=`${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+  const timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const groups=_getCombinedStockGroups();
+
+  const palette=[
+    {bg:'#e8f5e9',text:'#1b5e20',head:'#2E7D32'},
+    {bg:'#e3f2fd',text:'#0d47a1',head:'#1565C0'},
+    {bg:'#f3e5f5',text:'#6a1b9a',head:'#6A1B9A'},
+    {bg:'#fff3e0',text:'#e65100',head:'#EF6C00'},
+    {bg:'#fce4ec',text:'#880e4f',head:'#C2185B'}
+  ];
+  function statusBadge(qty){
+    if(qty===0) return `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'نفد':'Tükendi'}</span>`;
+    if(qty<=5)  return `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'منخفض':'Düşük'}</span>`;
+    return `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'جيد':'İyi'}</span>`;
+  }
+
+  const whCols=warehouses.map((w,idx)=>({w,pal:palette[idx%palette.length]}));
+  const grandTotal=groups.reduce((s,g)=>s+g.total,0);
+  const grandVal=groups.reduce((s,g)=>s+g.total*(g.price||0),0);
+  const whTotals=warehouses.map(w=>groups.reduce((s,g)=>s+(g.byDep[w.id]||0),0));
+
+  const rows=groups.map((g,i)=>{
+    const alt=i%2===0?'#fff':'#f8fafc';
+    const whCells=whCols.map(({w,pal})=>{
+      const q=g.byDep[w.id]||0;
+      if(!q) return `<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:#cbd5e1">—</td>`;
+      return `<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${pal.bg}"><span style="color:${pal.text};font-weight:700">${q.toLocaleString()}</span></td>`;
+    }).join('');
+    const priceCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}">${g.price>0?g.price.toFixed(2)+' ₺':'—'}</td>`:'';
+    const valCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-weight:600;color:#1F4E79">${g.price>0?(g.total*g.price).toFixed(2)+' ₺':'—'}</td>`:'';
+    return `<tr>
+      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:#94a3b8;font-size:10px">${i+1}</td>
+      <td style="padding:6px 10px;border:1px solid #e2e8f0;background:${alt};font-weight:600;font-size:11px">${h(g.name)}</td>
+      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-size:10px">${h(g.pkg)}</td>
+      ${whCells}
+      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-weight:800;font-size:12px;color:#0f172a">${g.total.toLocaleString()}</td>
+      <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}">${statusBadge(g.total)}</td>
+      ${priceCell}${valCell}
+    </tr>`;
+  }).join('');
+
+  const whHeadCells=whCols.map(({w,pal})=>`<th style="text-align:center;padding:8px;background:${pal.head};color:#fff;font-size:10px;border:1px solid #334155">${w.icon||''} ${h(isAr?w.nameAr:w.nameTr)}</th>`).join('');
+  const priceHdr=sp?`<th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'السعر ₺':'Fiyat ₺'}</th><th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'القيمة ₺':'Değer ₺'}</th>`:'';
+  const totalPriceCell=sp?`<td colspan="2" style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-weight:700;border:1px solid #334155">${grandVal>0?grandVal.toFixed(2)+' ₺':'—'}</td>`:'';
+  const whTotalCells=whTotals.map((t,idx)=>`<td style="text-align:center;padding:8px;background:${palette[idx%palette.length].head};color:#fff;font-weight:800;border:1px solid #334155">${t.toLocaleString()}</td>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="${isAr?'ar':'tr'}" dir="${isAr?'rtl':'ltr'}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${h(title)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f1f5f9;color:#1e293b;font-size:12px;direction:${isAr?'rtl':'ltr'}}
+  .page{max-width:1150px;margin:0 auto;background:#fff;padding:28px;min-height:100vh}
+  @media print{
+    body{background:#fff}
+    .page{max-width:100%;padding:16px;margin:0}
+    .no-print{display:none!important}
+    @page{margin:12mm;size:A4 landscape}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- شريط الطباعة -->
+  <div class="no-print" style="background:#1e293b;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:700">📄 ${h(title)}</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🖨️ ${isAr?'طباعة / حفظ PDF':'Yazdır / PDF Kaydet'}</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer">✕ ${isAr?'إغلاق':'Kapat'}</button>
+    </div>
+  </div>
+
+  <!-- ترويسة الشركة -->
+  <div style="background:linear-gradient(135deg,#1B5E20,#2E7D32,#388E3C);color:#fff;padding:22px 24px;border-radius:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:1px">🌿 Beydun Agro Sistem</div>
+      <div style="font-size:13px;opacity:.85;margin-top:4px">${isAr?'نظام إدارة المخزون الزراعي':'Tarımsal Stok Yönetim Sistemi'}</div>
+    </div>
+    <div style="text-align:${isAr?'left':'right'}">
+      <div style="font-size:11px;opacity:.8">${isAr?'تاريخ الإصدار':'Oluşturma Tarihi'}</div>
+      <div style="font-size:14px;font-weight:700">${dateStr}</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px">${timeStr}</div>
+    </div>
+  </div>
+
+  <!-- عنوان التقرير -->
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:18px;font-weight:800;color:#1e293b">${h(title)}</div>
+    <div style="font-size:11px;color:#64748b;margin-top:4px">${isAr?'صف واحد لكل صنف موزّعاً على كل المستودعات':'Her ürün tüm depolara dağıtılmış tek satırda'}</div>
+  </div>
+
+  <!-- بطاقات الإحصاء -->
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#1d4ed8">${groups.length}</div>
+      <div style="font-size:10px;color:#3b82f6;margin-top:3px">${isAr?'إجمالي الأصناف':'Toplam Çeşit'}</div>
+    </div>
+    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#16a34a">${grandTotal.toLocaleString()}</div>
+      <div style="font-size:10px;color:#22c55e;margin-top:3px">${isAr?'إجمالي الوحدات':'Toplam Adet'}</div>
+    </div>
+    ${sp&&grandVal>0?`<div style="flex:1;min-width:140px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:#d97706">${grandVal.toFixed(2)} ₺</div>
+      <div style="font-size:10px;color:#f59e0b;margin-top:3px">${isAr?'إجمالي القيمة':'Toplam Değer'}</div>
+    </div>`:''}
+    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#fdf4ff,#f3e8ff);border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#9333ea">${warehouses.length}</div>
+      <div style="font-size:10px;color:#a855f7;margin-top:3px">${isAr?'عدد المستودعات':'Depo Sayısı'}</div>
+    </div>
+  </div>
+
+  <!-- الجدول المجمّع -->
+  <div style="margin-bottom:28px;page-break-inside:avoid">
+    <table style="width:100%;border-collapse:collapse;font-family:inherit">
+      <thead>
+        <tr>
+          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155;width:36px">#</th>
+          <th style="text-align:${isAr?'right':'left'};padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'اسم الدواء / المنتج':'İlaç Adı / Ürün'}</th>
+          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'العبوة':'Ambalaj'}</th>
+          ${whHeadCells}
+          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'الإجمالي':'Toplam'}</th>
+          <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'الحالة':'Durum'}</th>
+          ${priceHdr}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="text-align:${isAr?'right':'left'};padding:8px 12px;background:#1e293b;color:#fff;font-weight:700;font-size:11px;border:1px solid #334155">
+            ${isAr?'الإجمالي':'Toplam'}
+          </td>
+          ${whTotalCells}
+          <td style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-weight:800;font-size:13px;border:1px solid #334155">${grandTotal.toLocaleString()}</td>
+          <td style="background:#1e293b;border:1px solid #334155"></td>
+          ${totalPriceCell}
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- تذييل -->
+  <div style="border-top:2px solid #e2e8f0;padding-top:14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#94a3b8">
+    <span>🌿 Beydun Agro Sistem © ${now.getFullYear()}</span>
+    <span>${isAr?'تم إنشاؤه بواسطة نظام إدارة المخزون الزراعي':'Tarım İlacı Stok Yönetim Sistemi'}</span>
+    <span>${dateStr} — ${timeStr}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+function exportCombinedStockPDF(){
+  const isAr=currentLang==='ar';
+  const title=isAr?'التقرير المجمّع — كل المستودعات':'Birleşik Rapor — Tüm Depolar';
+  const html=_buildCombinedPDFHTML(title);
+  const win=window.open('','_blank');
+  if(!win){showToast(isAr?'❌ السماح بالنوافذ المنبثقة':'❌ Açılır pencerelere izin ver','err');return;}
+  win.document.write(html);
+  win.document.close();
+  showToast('📄 PDF');
+}
+
+// ══════════════════════════════════════════════
+// 🚫 الأدوية المنتهية (qty = 0) — Excel و PDF
+// ══════════════════════════════════════════════
+function exportOutOfStockExcel(){
+  _ensureXLSX(function(){
+    const isAr=currentLang==='ar';
+    const sp=showPriceInExport;
+    const list=_getOutOfStockItems();
+    const headers=['#',isAr?'اسم الدواء':'İlaç Adı',isAr?'العبوة':'Ambalaj',isAr?'المستودع':'Depo'];
+    if(sp) headers.push(isAr?'آخر سعر':'Son Fiyat');
+    const rows=list.map((x,i)=>{
+      const row=[i+1,x.name,x.pkg,depN(x.dep)];
+      if(sp) row.push(x.price||0);
+      return row;
+    });
+    const wb2=makeWb(headers,rows,isAr?'الأدوية المنتهية':'Tükenen İlaçlar');
+    dlXlsx(wb2,`${isAr?'الادوية_المنتهية':'tukenen_ilaclar'}_${todayStr()}.xlsx`);
+    showToast('📥 Excel');
+  });
+}
+
+function _buildOutOfStockPDFHTML(title){
+  const isAr=currentLang==='ar';
+  const sp=showPriceInExport;
+  const now=new Date();
+  const dateStr=`${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+  const timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const list=_getOutOfStockItems();
+  const depCount=new Set(list.map(x=>x.dep)).size;
+
+  // أقسام حسب المستودع — بنفس نمط تقرير الجرد العادي (رأس ملوّن لكل مستودع)
+  let sectionsHTML='';
+  warehouses.forEach(wh=>{
+    const sub=list.filter(x=>x.dep===wh.id);
+    if(!sub.length)return;
+    const whName=isAr?wh.nameAr:wh.nameTr;
+    const hdrBg=wh.headerGrad||'linear-gradient(135deg,#B71C1C,#D32F2F)';
+    const rows=sub.map((x,i)=>{
+      const alt=i%2===0?'#fff5f5':'#fff';
+      const priceCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}">${x.price>0?x.price.toFixed(2)+' ₺':'—'}</td>`:'';
+      return `<tr>
+        <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:#94a3b8;font-size:10px">${i+1}</td>
+        <td style="padding:6px 10px;border:1px solid #e2e8f0;background:${alt};font-weight:600;font-size:11px">${h(x.name)}</td>
+        <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-size:10px">${h(x.pkg)}</td>
+        <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}"><span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700">${isAr?'نفد':'Tükendi'}</span></td>
+        ${priceCell}
+      </tr>`;
+    }).join('');
+    const priceHdr=sp?`<th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'آخر سعر ₺':'Son Fiyat ₺'}</th>`:'';
+    const colSpanLabel=sp?4:3;
+    sectionsHTML+=`
+    <div style="margin-bottom:28px;page-break-inside:avoid">
+      <div style="background:${hdrBg};color:#fff;padding:12px 18px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:16px;font-weight:800">${wh.icon} ${h(whName)}</div>
+        <div style="font-size:12px;opacity:.85">${sub.length} ${isAr?'صنف منتهٍ':'tükenen ürün'}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-family:inherit">
+        <thead>
+          <tr>
+            <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155;width:36px">#</th>
+            <th style="text-align:${isAr?'right':'left'};padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'اسم الدواء / المنتج':'İlaç Adı / Ürün'}</th>
+            <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'العبوة':'Ambalaj'}</th>
+            <th style="text-align:center;padding:8px;background:#1e293b;color:#fff;font-size:10px;border:1px solid #334155">${isAr?'الحالة':'Durum'}</th>
+            ${priceHdr}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="${colSpanLabel}" style="text-align:${isAr?'right':'left'};padding:8px 12px;background:#1e293b;color:#fff;font-weight:700;font-size:11px;border:1px solid #334155">
+              ${isAr?'عدد الأصناف المنتهية في هذا المستودع':'Bu depodaki tükenen ürün sayısı'}: ${sub.length}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="${isAr?'ar':'tr'}" dir="${isAr?'rtl':'ltr'}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${h(title)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f1f5f9;color:#1e293b;font-size:12px;direction:${isAr?'rtl':'ltr'}}
+  .page{max-width:900px;margin:0 auto;background:#fff;padding:28px;min-height:100vh}
+  @media print{
+    body{background:#fff}
+    .page{max-width:100%;padding:16px;margin:0}
+    .no-print{display:none!important}
+    @page{margin:15mm;size:A4 portrait}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="no-print" style="background:#1e293b;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:700">📄 ${h(title)}</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🖨️ ${isAr?'طباعة / حفظ PDF':'Yazdır / PDF Kaydet'}</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer">✕ ${isAr?'إغلاق':'Kapat'}</button>
+    </div>
+  </div>
+
+  <div style="background:linear-gradient(135deg,#7F1D1D,#B71C1C,#D32F2F);color:#fff;padding:22px 24px;border-radius:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:1px">🌿 Beydun Agro Sistem</div>
+      <div style="font-size:13px;opacity:.85;margin-top:4px">${isAr?'نظام إدارة المخزون الزراعي':'Tarımsal Stok Yönetim Sistemi'}</div>
+    </div>
+    <div style="text-align:${isAr?'left':'right'}">
+      <div style="font-size:11px;opacity:.8">${isAr?'تاريخ الإصدار':'Oluşturma Tarihi'}</div>
+      <div style="font-size:14px;font-weight:700">${dateStr}</div>
+      <div style="font-size:11px;opacity:.8;margin-top:2px">${timeStr}</div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:18px;font-weight:800;color:#1e293b">🚫 ${h(title)}</div>
+    <div style="font-size:11px;color:#64748b;margin-top:4px">${isAr?'أصناف كميتها الحالية صفر — بحاجة لإعادة التزويد':'Mevcut miktarı sıfır olan ürünler — yeniden stoklanmalı'}</div>
+  </div>
+
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1px solid #fecaca;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#dc2626">${list.length}</div>
+      <div style="font-size:10px;color:#ef4444;margin-top:3px">${isAr?'إجمالي الأصناف المنتهية':'Toplam Tükenen Ürün'}</div>
+    </div>
+    <div style="flex:1;min-width:140px;background:linear-gradient(135deg,#fdf4ff,#f3e8ff);border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#9333ea">${depCount}</div>
+      <div style="font-size:10px;color:#a855f7;margin-top:3px">${isAr?'عدد المستودعات المتأثرة':'Etkilenen Depo Sayısı'}</div>
+    </div>
+  </div>
+
+  ${list.length?sectionsHTML:`<div style="text-align:center;padding:40px;color:#16a34a;font-weight:700">✅ ${isAr?'لا توجد أدوية منتهية حالياً':'Şu anda tükenen ilaç yok'}</div>`}
+
+  <div style="border-top:2px solid #e2e8f0;padding-top:14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#94a3b8">
+    <span>🌿 Beydun Agro Sistem © ${now.getFullYear()}</span>
+    <span>${isAr?'تم إنشاؤه بواسطة نظام إدارة المخزون الزراعي':'Tarım İlacı Stok Yönetim Sistemi'}</span>
+    <span>${dateStr} — ${timeStr}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+function exportOutOfStockPDF(){
+  const isAr=currentLang==='ar';
+  const title=isAr?'الأدوية المنتهية — كل المستودعات':'Tükenen İlaçlar — Tüm Depolar';
+  const html=_buildOutOfStockPDFHTML(title);
   const win=window.open('','_blank');
   if(!win){showToast(isAr?'❌ السماح بالنوافذ المنبثقة':'❌ Açılır pencerelere izin ver','err');return;}
   win.document.write(html);
