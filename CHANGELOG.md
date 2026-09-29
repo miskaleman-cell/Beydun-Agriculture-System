@@ -1,262 +1,114 @@
-# سجل التغييرات — Beydun Agriculture System (بيدون للزراعة)
+## V19.1 — 29 September 2026
+### PDF pagination — rebuilt from V17
+- **Base version is BEYDUN AGRO V17 — Translation Fixed**, the last version confirmed to load data correctly before the later technical changes.
+- Re-applied only the warehouse inventory PDF pagination improvement requested by the user.
+- Warehouse sections can now use remaining page space instead of forcing large blank areas.
+- Table headers repeat when a table continues onto a new page.
+- Individual rows are kept intact.
+- Print margins and row spacing were reduced to fit more inventory rows per page.
+- No changes were made to inventory quantities, prices, warehouses, sales, movements, returns, translation logic, backup logic, or application data.
+- Service-worker cache version was advanced only to ensure the rebuilt application shell is loaded.
 
-يوثّق هذا الملف كل تغيير برمجي على `index.html` (والملفات المرافقة) حسب رقم
-الإصدار. الصيغة تتبع نمط [Keep a Changelog](https://keepachangelog.com/ar/).
+## V17 — 29 September 2026
+### Arabic / Turkish translation audit
+- Audited the language switching behavior across the application.
+- Added a complete fallback pass that translates exact UI strings from the Arabic/Turkish translation catalog even when they are rendered outside `[data-key]`.
+- Added missing common UI/category labels that were hard-coded outside the main translation catalog.
+- Arabic mode keeps **drug names, packaging/unit text, and prices unchanged** as requested.
+- Turkish mode translates the UI to Turkish while preserving **drug names, packaging/unit text, and prices**.
+- Warehouse names continue to use their language-specific Arabic/Turkish fields.
+- Added translation handling for placeholders, titles, and aria-labels when their values are part of the UI translation catalog.
+- No inventory quantities, prices, drug names, packages, movements, sales, returns, audit records, or warehouse stock data were changed by this translation fix.
 
-> 🎯 **الغرض**: في بداية أي محادثة جديدة، ارفع هذا الملف فقط (لا حاجة لرفع
-> الكود كاملاً) — يعطي فورًا صورة كاملة عن حالة التطبيق الحالية وتاريخ
-> التطورات، فيوفر وقت القراءة وتوكنات كثيرة بدل إعادة شرح كل شيء من الصفر.
+## V16 — 29 September 2026
+### Warehouse control and unpriced medicines
+- Enhanced **إدارة المستودعات / Depo Yönetimi** so every warehouse has a delete control.
+- A warehouse can only be deleted when it contains no products; the application blocks deletion of a non-empty warehouse to protect stock data.
+- The application also prevents deleting the final remaining warehouse.
+- Added an **الأدوية غير المسعرة / Fiyatsız İlaçlar** filter in **إدارة الأسعار / Fiyat Yönetimi**.
+- When enabled, the price page shows only products whose price is zero or empty, so they can be edited directly.
+- The unpriced filter respects the V15 zero-stock visibility rule: zero-stock products remain hidden from normal price lists and searches.
+- No stock quantities, movements, sales, returns, audit logs, or historical records were changed by this update.
 
-> 🏷️ **ملاحظة عن التسمية**: يوجد رقمان منفصلان لا يجب الخلط بينهما:
-> - **الاسم الرسمي** (مثل `BEYDUN AGRO V1`) — تسمية للتواصل والتسليم، تظهر في
->   هذا الملف فقط.
-> - **`APP_VERSION` الداخلي** في `index.html` — رقم تقني بحت يُستخدم لإدارة
->   كاش Service Worker تلقائيًا (يمنع تعارض نسخة قديمة مخزّنة في المتصفح مع
->   نسخة جديدة). `sw.js` يقرأ هذا الرقم تلقائياً عبر `postMessage` عند كل
->   تحميل — لا حاجة لتعديل `CACHE_NAME` في `sw.js` يدوياً.
->
-> **بالاتفاق: الرقمان يبقيان متطابقين دائماً** (`BEYDUN AGRO V2` ⇒
-> `APP_VERSION = '2'`). قبل كل تسليم، شغّل:
-> ```bash
-> node verify-version.js
-> ```
-> يتأكد تلقائياً أن رقم CHANGELOG وAPP_VERSION متطابقان، ويفشل بوضوح (exit
-> code 1) إن نسينا تحديث أحدهما.
+## V15 — 29 September 2026
+### Zero-stock visibility rule
+- Zero-stock products (`qty = 0`) are now hidden from normal product lists and product searches throughout the application.
+- This applies to inventory/warehouse lists, the all-products list, price/product lists, reports/product selection lists, dose/medicine selection lists, purchase product selectors, and other normal product pickers/searches.
+- The dedicated **الأدوية المنتهية / Tükenen İlaçlar** list remains the exception and continues to show all `qty = 0` products.
+- Historical records such as sales, movements, audit logs, returns, and other transaction history are not deleted or altered by this visibility rule.
+- No stock quantities were changed.
 
----
+# BEYDUN AGRO — CHANGELOG
 
-## 🏷️ BEYDUN AGRO V7 — 2026-09-24
-### تم الإصلاح
-- **التقرير المجمّع (Excel/PDF) كان يُظهر أدوية منتهية (كميتها صفر في كل
-  المستودعات)**: أصبحت `_getCombinedStockGroups()` تستبعد أي صنف إجماليه
-  صفر عبر كل المستودعات تلقائياً — تماماً كما تستبعد تقارير كل مستودع على
-  حدة الأصناف الفارغة فيه. صنف له مخزون في مستودع واحد فقط ما زال يظهر
-  بشكل طبيعي مع "—" في عمود المستودع الفارغ.
-- **إخفاء الأدوية المنتهية افتراضياً عند البحث/تصفح المستودعات**: خيار
-  "🙈 إخفاء المنتهي" الموجود أصلاً في صفحة "الكل مجتمعاً" (ويشارك نفس
-  الإعداد صفحات كل مستودع) أصبح **مفعّلاً افتراضياً** لمن لم يغيّره من قبل،
-  فلا تظهر الأدوية التي كميتها صفر في نتائج البحث أو عروض المستودعات
-  تلقائياً بعد اليوم. من ضبط الخيار يدوياً من قبل (إظهار أو إخفاء) يبقى
-  اختياره كما هو.
+## V14 — 29 September 2026
+### Documentation / Release consolidation
+- Consolidated the change history from the V7 baseline through V14.
+- Documented the product-name, package/unit, price, and classification synchronization work.
+- Documented the inventory-safety requirement: stock quantities, warehouse assignments, and historical transaction records were preserved during the synchronization work.
+- Documented the Excel-based `HASTALIK-ZARARLI` classification synchronization.
+- Recorded the five products for which no reliable `HASTALIK-ZARARLI` match was found and therefore no classification was guessed:
+  - BOROPLUS
+  - EFA LEAF
+  - GAXY
+  - SOL FERT — 1 LT
+  - SOL FERT — 5 LT
 
-### أُضيف
-- **زرّا "🚫 الأدوية المنتهية" (Excel و PDF)** في صفحة **"الكل مجتمعاً"**،
-  بنفس نمط الأزرار الأخرى (Excel، PDF، التقرير المجمّع...). يُنشئان قائمة
-  بكل الأدوية التي كميتها الحالية صفر في أي مستودع:
-  - **Excel**: صف لكل (دواء + عبوة + مستودع) مع آخر سعر معروف إن كان خيار
-    "إظهار السعر" مفعّلاً.
-  - **PDF**: نفس الأسلوب الملوّن لتقرير PDF العادي (ترويسة حمراء، بطاقات
-    إحصاء، قسم منفصل ملوّن لكل مستودع مع شارة "نفد" لكل صنف).
-  - القائمة **حيّة** تُبنى من المخزون الفعلي وقت التصدير (`_getOutOfStockItems()`)
-    وليست قائمة محفوظة يدوياً — فبمجرد إضافة كمية جديدة لأي صنف منها (سواء
-    عبر "إضافة مخزون" أو عند إضافة دواء جديد بكمية أكبر من صفر)، يختفي
-    تلقائياً من هذه القائمة في المرة القادمة دون أي إجراء إضافي.
-  - دوال جديدة: `_getOutOfStockItems()`, `exportOutOfStockExcel()`,
-    `_buildOutOfStockPDFHTML(title)`, `exportOutOfStockPDF()`.
+## V13 — 29 September 2026
+### HASTALIK-ZARARLI synchronization
+- Synchronized the application's medicine-type/classification data with the `HASTALIK-ZARARLI` column in the Excel reference file `2027 SATIŞ FİYAT LİSTESİ.xlsx`.
+- Matched 210 of 215 inventory/product records to a reliable Excel classification.
+- Preserved the existing internal classification data as a compatibility layer rather than deleting it.
+- Did not alter stock quantities, warehouse assignments, prices, or historical movement records as part of the classification update.
+- Left five records without a guessed classification because no reliable Excel match was established:
+  - BOROPLUS
+  - EFA LEAF
+  - GAXY
+  - SOL FERT — 1 LT
+  - SOL FERT — 5 LT
 
-## 🏷️ BEYDUN AGRO V6 — 2026-09-20
-### أُضيف
-- **زر "📊 تقرير مجمّع PDF"** في صفحة **"الكل مجتمعاً"**، بنفس ترتيب زر
-  "📊 تقرير مجمّع" (Excel) مباشرة وقبل زر "📄 PDF" العادي. يفتح تقرير PDF
-  ملوّن بنفس تنسيق زر "📄 PDF" الحالي (ترويسة خضراء، بطاقات إحصاء، تدرّجات
-  لونية، طباعة/حفظ كـPDF من المتصفح)، لكن بجدول **مجمّع واحد** بدل قسم
-  منفصل لكل مستودع: كل صف = دواء + عبوة، مع عمود ملوّن مخصص لكل مستودع
-  (كمية هذا الصنف فيه بلون مميز)، عمود "الإجمالي"، شارة حالة (نفد/منخفض/جيد)
-  حسب إجمالي الكمية، وعمودي السعر/القيمة إن كان خيار "إظهار السعر" مفعّلاً.
-  - دوال جديدة: `_buildCombinedPDFHTML(title)`, `exportCombinedStockPDF()`.
-  - تم أيضاً استخراج منطق تجميع الأصناف (دواء+عبوة عبر كل مستودع) إلى دالة
-    مشتركة `_getCombinedStockGroups()` يستخدمها كل من تصدير Excel و PDF
-    المجمّعين لتفادي تكرار الكود.
+## V12 — 29 September 2026
+### Selected package/unit corrections
+Applied only the seven explicitly requested package/unit changes:
+1. COCOLY: 20 KG → 25 KG
+2. CARLOS: 1 KG → 2.5 KG
+3. FASCINATE: 1 LT → 1 KG
+4. ODEON: 1 KG → 800 GR
+5. VITASEVE: 10 LT → 10 KG
+6. ANTHOLOGY: PAKET → 600 GR
+7. DEFENTOX: 0.25 ML → 250 ML
 
-## 🏷️ BEYDUN AGRO V5 — 2026-09-20
-### أُضيف
-- **تقرير Excel مجمّع لكل المستودعات** في صفحة **"الكل مجتمعاً"**: زر جديد
-  "📊 تقرير مجمّع" بجانب زر "📥 Excel" الحالي. يُصدّر ملفاً واحداً (ورقة
-  واحدة) يجمع كل صنف (دواء + عبوة) عبر كل المستودعات في صف واحد: عمود لكل
-  مستودع بكميته فيه + عمود "الإجمالي" (مجموع كل المستودعات)، ويضيف عمود
-  السعر إن كان خيار "إظهار السعر" مفعّلاً. هذا يغطي طلب تصدير مجمّع لم يكن
-  موجوداً فعلياً — زر "📥 Excel" الحالي يُصدّر ملفاً بورقة منفصلة لكل مستودع
-  (غير مجمّع في صف واحد لكل صنف).
-  - دالة جديدة: `exportCombinedStockExcel()`.
+- No stock quantities were changed.
+- No additional package/unit changes were applied beyond the seven requested changes.
 
-## 🏷️ BEYDUN AGRO V4 — 2026-09-20
-### تم الإصلاح
-- **فلتر سجل الحركات لا يعمل**: قائمة الفلتر (`movFilter`) كانت تُقارن قيمة
-  الخيار المختار (`IN`/`OUT`/`TRANSFER`/`RET`) مباشرةً مع `m.type` المخزَّن،
-  لكن `m.type` يُحفظ دائماً كنص مترجم (`إدخال`/`Giriş`، `إخراج`/`Çıkış`...)
-  وليس كرمز — فكانت المقارنة تفشل دوماً وتُظهر قائمة فارغة عند اختيار أي نوع
-  محدد (تعمل فقط عند اختيار "جميع العمليات" لأنه يتجاوز الفلتر). أُضيفت دالة
-  `movTypeCode()` تُحوّل النص المترجم (عربي/تركي) إلى رمز قياسي، ويُقارَن
-  الفلتر معها الآن بدل المقارنة المباشرة.
+## V11 — 29 September 2026
+### Excel-based product name/package synchronization
+- Updated product names to follow the names in the 2027 Excel price list.
+- Updated package/unit descriptions while taking package size into account.
+- Examples included:
+  - AXLERON 250 ML → AXLERON 200 CC
+  - COCOLY 20 KG → COCOLY 25 KG
+  - CARLOS 1 KG → CARLOS 2.5 KG
+  - ODEON 1 KG → ODEON 50 WP 800 GR
+  - DEFENTOX 0.25 ML → DEFENTOX 250 ML
+- Preserved inventory quantities during the name/package synchronization.
+- The Excel list was used as the naming/package reference.
 
-### أُضيف
-- **سجل حركات الدواء عند الضغط عليه**: في **سجل الحركات**، أصبح اسم الدواء في
-  كل صف قابلاً للضغط (رابط تحته خط) — يفتح نافذة منبثقة تعرض كل حركات هذا
-  الدواء تحديداً (دخول/خروج/مرتجع...) مرتبة الأحدث أولاً، مع بطاقتي إجمالي
-  ("إجمالي الداخل" و"إجمالي الخارج") محسوبتين تلقائياً.
-  - دوال جديدة: `showDrugMovHistory(name)`, `_movDirection(type)`.
+## V10 — 29 September 2026
+### Price correction
+- Corrected ANTHOLOGY price from 2,250 to 3,500 based on the 2027 Excel price list.
+- Added update handling so previously stored data could receive the corrected price.
+- No inventory quantity change was intended by this correction.
 
-## 🏷️ BEYDUN AGRO V3 — 2026-07-27
-### أُضيف
-- **بيانات الشركة القابلة للتعديل**: زر جديد "🏢 بيانات الشركة" (في الشريط العلوي
-  وقائمة الإجراءات بالجوال) يفتح نافذة لإدخال اسم الشركة/رقم الهاتف/البريد
-  الإلكتروني، تُحفظ محلياً على هذا الجهاز (`agro_company_info`). عند ترك الحقول
-  فارغة تُستخدم القيم الافتراضية الحالية كما هي (Beydun Agro / رقم ومايل
-  محمود) — لا تغيير في السلوك لمن لا يستخدم الميزة.
-- تُستخدم هذه البيانات الآن بدل الاسم/الهاتف/البريد الثابت في: فاتورة الواتساب
-  (من سجل الفواتير القديمة، ومن شاشة إنشاء فاتورة جديدة) والفاتورة
-  المطبوعة/PDF. هذا يسمح لأي شركة تستخدم هذا التطبيق مستقبلاً بإضافة اسمها
-  الخاص دون تعديل الكود.
-- (تقرير المخزون المطبوع وعنوان التطبيق/صفحة "حول" ما زالا يحملان اسم Beydun
-  حسب الاتفاق — لم يُطلب تعميمهما في هذا الإصدار.)
+## V9 — 29 September 2026
+### 2027 product-name alignment
+- Updated product names to align with the 2027 Excel price list.
+- The source changelog recorded 127 product-name changes and 74 already-matching names.
+- Package values were intended to remain unchanged in that release.
 
-## 🏷️ BEYDUN AGRO V2 — 2026-07-26
-### تم الإصلاح
-- `_lsCleanup()`: كانت تحذف `agro_last_daily_backup` و`agro_last_weekly_backup`
-  عند امتلاء `localStorage`، رغم أن هذين المفتاحين لا يحرران مساحة تُذكر
-  (مجرد تاريخ نصي صغير). حذفهما كان يصفّر تتبّع "آخر نسخة احتياطية" ويُعيد
-  تفعيل تذكير النسخ الاحتياطي اليومي/الأسبوعي رغم أخذه فعلاً. أصبحت
-  `_lsCleanup()` تحذف `agro_doses` فقط (المفتاح القديم المهجور).
+## V8 — 29 September 2026
+### 2026–2027 price update
+- Updated sales prices for the 2026–2027 season according to the application's release history.
 
-## 🏷️ BEYDUN AGRO V1 — 2026-07-09
-أول إصدار رسمي مُسمّى للمشروع. يجمع كل الأعمال الموثّقة أدناه (v11 → v13)
-تحت اسم واحد كنقطة انطلاق للتتبع الرسمي القادم.
-
-
-
-## [الوضع الحالي كملخص سريع]
-- تطبيق PWA بملف HTML واحد (`index.html`)، بدون خادم خلفي — كل البيانات محلية
-  (IndexedDB + localStorage) مع نسخ احتياطي دوري تلقائي.
-- إدارة مخزون بـ 3 مستودعات، فواتير بيع، مرتجعات، سجل تدقيق (auditLog) كامل
-  لكل حركة (IN/OUT/SALE/RET/PRICE...).
-- دعم لغتين واجهة: عربي وتركي (`currentLang`)، مع تطبيع بحث تركي (نقطة الـ İ).
-- نسخ احتياطي: تصدير/استيراد JSON، ومشاركة مباشرة عبر Web Share API
-  (تلغرام والمزيد) — مع تراجع تلقائي للتصدير العادي عند فشل المشاركة
-  (يحدث خصوصًا عند فتح التطبيق عبر `content://` بدل خادم/PWA مثبّتة).
-
-## [أعمال سابقة موثّقة بدون رقم إصدار دقيق]
-> هذه تغييرات معروف أنها حصلت في مراحل سابقة، لكن بلا رقم نسخة مسجَّل بدقة —
-> مذكورة هنا للسياق العام فقط، وليست جزءًا من التتبع الرسمي أدناه.
-- بحث العملاء بالاسم مع تطبيع الحرف التركي (نقطة الـ İ).
-- إصلاحات فيض شريط التنقل السفلي على الجوال.
-- نافذة نسخ احتياطي (Modal) تربط دوال التصدير/الاستيراد الموجودة مسبقًا.
-- تدقيق شامل للترجمة التركية، بما فيها Proxy ديناميكي لأسماء المستودعات
-  (`depNames`).
-- مفتاح إخفاء "نافد من المخزون" (Out of Stock toggle).
-- عرض التوفر الحي للمخزون داخل نموذج الفاتورة.
-- تشديد أمني ضد XSS عبر دالة `h()` للتهريب الشامل.
-- كسر Template Literal بسبب أمر `sed` خاطئ — تم إصلاحه.
-- مشكلة توقيت تحميل مكتبة XLSX (Lazy-loaded) — تم حلها.
-- إصلاح Datalist في الفاتورة (تطابق مركّب: الاسم + العبوة + المستودع).
-- إضافة تصدير PDF احترافي للفواتير.
-
----
-
-## [v19] — 2026-07-26
-### تغيّر
-- إلغاء **التصدير التلقائي** للنسخة الاحتياطية (تنزيل ملف) عند فتح البرنامج،
-  سواء اليومي (`checkDailyBackup()`) أو الأسبوعي (`checkWeeklyBackup()`) —
-  لم يعد يتم استدعاؤهما عند التحميل. التصدير (تنزيل ملف JSON) يحدث الآن
-  **فقط** عند الضغط اليدوي على زر "📤 تصدير نسخة احتياطية" أو زر "نسخ
-  احتياطي الآن" داخل نافذة إعدادات النسخ الاحتياطي.
-- القيم الافتراضية لـ `backupSettings.dailyEnabled` و`weeklyEnabled` أصبحت
-  `false` (بدل `true`) في كل نقاط التهيئة الثلاث (`backupSettings` الابتدائي،
-  fallback في `_buildSnap()`، وترقية المخطط v2→v3). هذا يضمن أن أي تثبيت جديد
-  لا يُفعّل النسخ التلقائي حتى لو تم استدعاء الدوال لاحقًا.
-- خيار "نسخ احتياطي عند الإغلاق" (`onCloseEnabled`) بقي كما هو دون تغيير —
-  فهو لا يُصدّر ملفًا، بل يحفظ البيانات داخليًا فقط (`localStorage`/IndexedDB)
-  عند إغلاق المتصفح لمنع فقدان البيانات، وهذا مختلف عن "التصدير".
-
-## [v18] — 2026-07-26
-### تم الإصلاح
-- عدم توافق ترتيب **"آخر الحركات"** (لوحة التحكم) مع **"سجل الحركات"**
-  الكامل: كان الفرز فيهما بالتاريخ فقط (بدقة يوم واحد)، فتحافظ حركات نفس
-  اليوم على ترتيبها الأصلي بدل الأحدث-أولاً في واجهة "آخر الحركات"، بينما
-  "سجل الحركات" الكامل يعرضها معكوسة (الأحدث أولاً) — الآن كلا الشاشتين
-  تعرضان نفس ترتيب حركات نفس اليوم (الأحدث أولاً).
-
-### أُضيف
-- في **سجل العميل** (سجل العملاء ← 📋)، بجانب عنوان "سجل الفواتير":
-  خيار **"تحديد الكل"** + مربع اختيار (checkbox) على كل فاتورة، مع عرض
-  إجمالي الفواتير المحددة فقط تلقائيًا (`_toggleCustInvSelectAll()`,
-  `_updateCustInvSelTotal()`).
-
-## [v17] — 2026-07-26
-### تغيّر
-- استُبدلت كل أيقونات التطبيق (`favicon-16.png`, `favicon-32.png`,
-  `icon-180.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-192.png`,
-  `icon-maskable-512.png`) بالشعار الجديد (نسر ذهبي + سنابل قمح + 3 نجوم +
-  عبارة BEYDUN AGRO SİSTEM). الأيقونات العادية استُخدم فيها الشعار كاملاً،
-  بينما نسختا `maskable` أُعيد توسيطهما بهامش أمان أكبر (safe zone) لتجنّب
-  اقتصاص النص أو النجوم عند القص الدائري/المربّع على أندرويد. الشعار المُضمّن
-  داخل الواجهة (الشريط الجانبي) لم يتغيّر لأنه يطابق نفس التصميم أصلاً.
-
-## [v16] — 2026-07-24
-### أُضيف
-- زر **"تمت القراءة"** في نافذة مركز التنبيهات (🔔): يضع علامة "مقروء" على كل
-  التنبيهات الحالية (مخزون منخفض/نافد، انتهاء صلاحية، ديون مستحقة) عبر مفاتيح
-  فريدة محفوظة في `localStorage` (`beydun_alerts_read`)، فيختفي عداد الجرس
-  حتى تظهر تنبيهات جديدة فعلاً لم تُقرأ من قبل.
-  - `markAlertsRead()`, `_buildAlertKeys()`, `_getReadAlertKeys()`,
-    `_saveReadAlertKeys()`.
-  - تحديث `_updateAlertsBadge()` ليحسب العدد "غير المقروء" عبر كل الأنواع
-    الثلاثة بدل الاعتماد فقط على المخزون المنخفض.
-
-### تغيّر
-- إعادة ترتيب الشريط الجانبي: نُقلت أزرار **"حاسبة الجرعات"**،
-  **"أنواع الدواء"**، و**"وقت العلاج"** لتصبح مباشرة أسفل زر
-  **"إدارة المستودعات"** (ضمن قسم "الإدارة")، بدل تفرّقها بين قسمي
-  "الرئيسية" و"المبيعات".
-- إزالة التمييز اللوني الخاص عن زر **"فواتير الشراء"** (كان بخلفية بنفسجية
-  فاتحة مميزة) ليصبح بنفس شكل بقية أزرار قسم "الإدارة".
-
-## [v15] — 2026-07-24
-### حُذف
-- خيار **"مشاركة (تلغرام والمزيد)"** لتصدير النسخة الاحتياطية عبر
-  Web Share API (`shareBackup()`)، مع زرّيه في نافذة "النسخة الاحتياطية"
-  الكاملة (القائمة الجانبية) وفي قائمة إجراءات الجوال (Bottom Sheet).
-  التصدير العادي (`exportBackup()`) لا يزال متاحًا كما هو.
-
-## [v14] — 2026-07-24
-### أُضيف
-- زر **"إخفاء المنتهي"** (إخفاء الأدوية نافدة المخزون، qty=0) في صفحة
-  **"الكل مجتمعاً"** (`page-all`)، بنفس سلوك الزر الموجود مسبقًا في كل صفحة
-  مستودع منفرد (المستودع الأول/الثاني/الثالث). الحالة مشتركة عبر
-  `localStorage` (`beydun_wh_hide_out`)، فتفعيلها من أي صفحة ينعكس في البقية.
-  - `toggleAllHideOut()` + `_updateAllHideOutBtn()` (زر `#b-all-hideout`).
-  - `renderAllTable()` يستثني عناصر `qty===0` عند تفعيل الخيار.
-
-## [v13] — 2026-07-09
-### تم الإصلاح
-- `shareBackup()`: عند فشل المشاركة لأي سبب غير إلغاء المستخدم (خصوصًا خطأ
-  "Permission denied" الذي يظهر عند فتح التطبيق عبر `content://` بدل خادم
-  ويب/PWA مثبّتة)، يتراجع النظام تلقائيًا لحفظ الملف (نفس آلية `exportBackup`)
-  مع رسالة توضيحية للمستخدم بدل رسالة خطأ بلا فائدة.
-
-## [v12] — 2026-07-09
-### أُضيف
-- ميزة **مشاركة النسخة الاحتياطية** عبر Web Share API (`shareBackup()`):
-  يبني نسخة احتياطية كاملة (JSON) ويفتح قائمة مشاركة الجهاز الأصلية، تتيح
-  اختيار تلغرام → الرسائل المحفوظة (Saved Messages) أو أي وجهة أخرى.
-  - زر جديد في نافذة "النسخة الاحتياطية" الكاملة (القائمة الجانبية).
-  - زر جديد في قائمة إجراءات الجوال (Bottom Sheet).
-  - تراجع تلقائي لتصدير ملف عادي إن لم يدعم المتصفح مشاركة الملفات.
-  - تجاهل صامت عند إلغاء المستخدم للمشاركة (AbortError).
-
-## [v11] — قبل 2026-07-09 (`stock-qty-fixed`)
-### تم الإصلاح
-- إصلاح متعلق بكمية المخزون (Stock Qty) — حسب اسم الملف المرفوع، بلا تفاصيل
-  إضافية موثّقة في هذه المحادثة.
-
----
-
-## قالب لإضافة نسخة جديدة
-```md
-## [vXX] — YYYY-MM-DD
-### أُضيف
-- ...
-### تم التغيير
-- ...
-### تم الإصلاح
-- ...
-```
+## V7 — baseline
+- Baseline version used for the detailed V7 → later-version inventory comparison.
+- Later synchronization work was designed to preserve stock quantities and historical operational records while updating descriptive/reference data.
