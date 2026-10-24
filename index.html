@@ -3576,13 +3576,13 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
 </div>
 
 <!-- ══ MODAL: تعديل الفاتورة ══════════════════════════════════════════ -->
-<div class="mo" id="mo-edit-inv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box" onclick="if(event.target===this)closeEditInvModal()">
-  <div class="modal" style="max-width:680px;margin:auto">
-    <div class="mh" style="background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">
+<div class="mo" id="mo-edit-inv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;align-items:flex-start" onclick="if(event.target===this)closeEditInvModal()">
+  <div class="modal" style="max-width:680px;width:100%;margin:0 auto 8px;max-height:calc(100dvh - 16px);display:flex;flex-direction:column;overflow:hidden">
+    <div class="mh" style="background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
       <strong id="edit-inv-title">✏️ تعديل الفاتورة</strong>
       <button onclick="closeEditInvModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>
     </div>
-    <div class="modal-box" style="padding:16px">
+    <div class="modal-box" style="padding:16px;overflow-y:auto;overflow-x:hidden;min-height:0;flex:1;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div class="fg"><label>اسم العميل</label><input id="ei-customer" class="ti" type="text" placeholder="العميل"></div>
         <div class="fg"><label>المنطقة</label><input id="ei-region" class="ti" type="text" placeholder="المنطقة"></div>
@@ -12226,6 +12226,7 @@ function openCustomerHistory(encodedName){
           <span class="bdg ba" style="font-size:10px">${inv.region||'—'}</span>
           <strong>${numFmt(inv.total)} ₺</strong>
           <button onclick="sendInvoiceWhatsApp('${inv.invNo}')" style="background:#25D366;border:none;color:#fff;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700">📱 WhatsApp</button>
+          <button onclick="openEditInvoiceModal('${inv.invNo}')" style="background:#1565C0;border:none;color:#fff;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700">✏️ ${isAr?'تعديل':'Düzenle'}</button>
         </div>
         <div style="padding:6px 0">
           ${inv.items.map(r=>`<div style="display:flex;justify-content:space-between;padding:4px 14px;font-size:11px;border-bottom:1px solid var(--gy1)">
@@ -14453,6 +14454,37 @@ function saveEditedInvoice() {
     if (!item) { errors.push('❌ ' + r.name + (r.pkg ? ' ('+r.pkg+')' : '') + ': غير موجود في المخزون'); }
     else if (r.qty > availableAfterRestore) {
       errors.push(r.name + ': الكمية ' + r.qty + ' أكبر من المتوفر ' + availableAfterRestore);
+    }
+  });
+
+  // تحقق إجمالي المخزون بعد احتساب كل كميات الفاتورة القديمة التي ستُعاد أولاً.
+  // هذا يمنع تجاوز المخزون عند تكرار الصنف في أكثر من صف أو إضافة صنف جديد.
+  var oldInvoiceRows = salesLog.filter(function(s){ return s.invNo === invNo; });
+  var oldQtyByItem = {};
+  oldInvoiceRows.forEach(function(s) {
+    var oldItem = _findDbItem(s.name, s.pkg, s.dep);
+    if (oldItem) {
+      var key = String(oldItem.id);
+      oldQtyByItem[key] = (oldQtyByItem[key] || 0) + (parseInt(s.qty, 10) || 0);
+    }
+  });
+  var requestedByItem = {};
+  var requestedNames = {};
+  _eiRows.forEach(function(r) {
+    if (!r.name || r.qty <= 0) return;
+    var item = _findDbItem(r.name, r.pkg, r.dep || 1);
+    if (!item) return; // سيظهر خطأ عدم وجود الصنف أعلاه
+    var key = String(item.id);
+    requestedByItem[key] = (requestedByItem[key] || 0) + r.qty;
+    requestedNames[key] = item.name + (item.pkg ? ' (' + item.pkg + ')' : '');
+  });
+  Object.keys(requestedByItem).forEach(function(key) {
+    var item = db.find(function(x){ return String(x.id) === key; });
+    if (!item) return;
+    var availableAfterRestore = (parseInt(item.qty, 10) || 0) + (oldQtyByItem[key] || 0);
+    if (requestedByItem[key] > availableAfterRestore) {
+      errors.push('❌ ' + requestedNames[key] + ': الكمية المطلوبة ' +
+        requestedByItem[key] + ' أكبر من المتوفر بعد إعادة الفاتورة ' + availableAfterRestore);
     }
   });
 
