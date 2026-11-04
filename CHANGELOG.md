@@ -1,3 +1,11 @@
+## V19.5 — 4 November 2026
+### Automatic pricing for historical invoices
+- On startup, after the saved database and warehouse data are loaded, the app checks historical sales rows for a missing or zero price.
+- If the matching product (name, package, and preferred warehouse, with existing fallback matching) has a current price greater than zero, that current price is copied into the historical invoice row.
+- Existing non-zero historical prices are never overwritten. Rows with no matching product or no current price remain unchanged.
+- Updated rows are saved through the existing persistence layer, so invoice totals and customer purchase summaries recalculate from the updated sales records.
+- JavaScript syntax validation passed. Runtime behavior still needs confirmation with the user's actual saved data.
+
 ## V19.1 — 29 September 2026
 ### PDF pagination — rebuilt from V17
 - **Base version is BEYDUN AGRO V17 — Translation Fixed**, the last version confirmed to load data correctly before the later technical changes.
@@ -112,3 +120,42 @@ Applied only the seven explicitly requested package/unit changes:
 ## V7 — baseline
 - Baseline version used for the detailed V7 → later-version inventory comparison.
 - Later synchronization work was designed to preserve stock quantities and historical operational records while updating descriptive/reference data.
+
+
+## V19.6
+- Added a per-line warehouse selector to the historical invoice editor. Selected warehouse is saved with the edited invoice line and drives stock lookup/deduction.
+
+## V19.7 — إصلاح تعديل العملاء الضيوف
+- عند تعديل عميل ظاهر في سجل العملاء لكنه غير مسجل ببطاقة عميل، يتم ربط بياناته الجديدة بسجلات مبيعاته ومرتجعاته السابقة.
+- عند تغيير الاسم، يتم تحديث اسم العميل في الحركات التاريخية بدلاً من فصلها عن العميل.
+- يبقى مسار تعديل العملاء المسجلين كما هو.
+
+## V19.8 — ترتيب العملاء وتحديث مؤشرات الجرعات
+- أصبح سجل العملاء مرتباً أبجدياً حسب الاسم بدلاً من ترتيب إجمالي المشتريات.
+- بعد حفظ تعديل مساحة الدونم، يتم تحديث مؤشرات الاستهلاك التاريخي لكل دونم فوراً، وإعادة حساب الحاسبة إذا كانت صفحة الجرعات مفتوحة.
+- لم يتم تغيير الجرعات الأساسية المحفوظة للأدوية؛ المؤشرات التاريخية تبقى بيانات استهلاك وليست توصية جرعة زراعية.
+
+## V19.9 — تحسين واجهة تعديل الفاتورة على الهاتف
+- تكبير حقل اختيار الدواء وجعله بعرض كامل السطر.
+- ترتيب الكمية والسعر والخصم والحذف في صف مستقل وواضح.
+- تكبير حقول الإدخال واختيار المستودع وتحسين المسافات والبطاقات.
+- جعل حقول العميل والمنطقة والتاريخ ورقم الفاتورة عمودية على الشاشات الضيقة.
+- إزالة التمرير الداخلي المحدود لقائمة الأصناف لتسهيل استخدام الصفحة.
+
+
+## V20.0 – إدارة التطبيق وترتيب القوائم
+- نقل فئة المبيعات لتظهر أعلى فئة العمليات في القائمة الجانبية.
+- إضافة صفحة إدارة التطبيق قبل النسخة الاحتياطية.
+- إعداد وضع عرض الجوال/الحاسوب وحجم الخط.
+- إضافة وضع سحب وإفلات لترتيب أزرار القائمة وحفظ الترتيب محلياً.
+
+## V20.1 — ترتيب سجل الحركات حسب تاريخ العملية
+- أصبح سجل الحركات يعرض الأحدث حسب تاريخ الحركة نفسه، وليس حسب ترتيب إدخالها في النظام.
+- إدخال حركة بتاريخ سابق لن يجعلها تظهر قبل الحركات ذات التاريخ الأحدث.
+- سجل التعديلات لم يتغير؛ يبقى مرتّباً حسب وقت تسجيل التعديل لمعرفة متى نُفذت العملية فعلياً.
+
+## V20.2 – إزالة زر عرض سطح المكتب ومراجعة الترجمة
+- إزالة زر عرض سطح المكتب العائم من واجهة الجوال؛ يبقى اختيار وضع العرض ضمن إدارة التطبيق.
+- إعادة تطبيق قاموس الترجمة العربية/التركية بعد إعادة رسم الصفحة لتقليل بقاء النصوص الثابتة بلغة سابقة.
+- توسيع قاموس النصوص الثابتة لإعدادات العرض وحجم الخط.
+- لم تتم ترجمة أسماء المنتجات أو العملاء أو بيانات المستخدم المدخلة.

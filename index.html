@@ -56,6 +56,23 @@
   src: url('https://cdn.jsdelivr.net/npm/@fontsource/cairo@5/files/cairo-arabic-900-normal.woff2') format('woff2'),
        url('https://cdn.jsdelivr.net/npm/@fontsource/cairo@5/files/cairo-latin-900-normal.woff2') format('woff2');
 }
+
+/* V19.9: larger, responsive invoice editor controls */
+#mo-edit-inv .modal{width:calc(100% - 4px)!important;max-width:760px!important;border-radius:18px!important}
+#mo-edit-inv .modal-box{padding:14px!important}
+#mo-edit-inv #ei-rows-wrap{display:flex;flex-direction:column;gap:12px}
+#mo-edit-inv #ei-rows-wrap>div{border-radius:12px!important;box-shadow:0 2px 8px rgba(15,23,42,.07)}
+#mo-edit-inv .ei-main-grid input{min-height:46px}
+#mo-edit-inv select{max-width:100%;box-sizing:border-box}
+@media(max-width:520px){
+ #mo-edit-inv{padding:4px!important}
+ #mo-edit-inv .modal{max-height:calc(100dvh - 8px)!important;margin:0 auto 4px!important}
+ #mo-edit-inv .modal-box{padding:10px!important}
+ #mo-edit-inv .modal-box>div:first-child{grid-template-columns:1fr!important;gap:8px!important}
+ #mo-edit-inv .ei-main-grid{grid-template-columns:repeat(3,minmax(0,1fr)) 40px!important;gap:6px!important;padding:10px!important}
+ #mo-edit-inv .ei-main-grid>div:first-child{grid-column:1/-1!important}
+ #mo-edit-inv .ei-main-grid input{font-size:16px!important}
+}
 </style>
 <script>
 // ── CONSOLE POLYFILL — بعض متصفحات Android لا تدعم console.info/group/table
@@ -950,6 +967,9 @@ td{padding:8px 12px;vertical-align:middle}
   transform: translateY(-3px);
 }
 
+/* V20.2: remove floating desktop-view button from all screen sizes */
+.desktop-toggle-btn,#desktop-toggle-btn{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
 /* ── Desktop toggle button ── */
 #root .desktop-toggle-btn{
   background: var(--mat-primary);
@@ -1569,6 +1589,12 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
 }
 </style>
 
+<style>
+#page-appmanage .form-control{padding:11px;border:1px solid var(--gy3);border-radius:9px;background:#fff;font:inherit}
+.nav-btn.app-sortable{cursor:grab;touch-action:pan-y;outline:1px dashed #c9a84c;outline-offset:-3px}
+.nav-btn.app-dragging{opacity:.35}.nav-btn.app-drop-target{border-top:3px solid #c9a84c!important}
+body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-120{font-size:120%}
+</style>
 </head>
 <body>
 
@@ -1629,17 +1655,17 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     <button class="nav-btn" onclick="showPage('all')" id="nav-all"><span class="ni">🗂️</span><span data-key="allDeps">الكل مجتمعاً</span></button>
   </div>
   <div style="padding:0 6px">
+    <div class="nav-lbl" data-key="secSales">المبيعات</div>
+    <button class="nav-btn" onclick="showPage('invoice')" id="nav-invoice"><span class="ni">🧾</span><span data-key="invoice">فاتورة عميل</span></button>
+    <button class="nav-btn" onclick="showPage('sales')" id="nav-sales"><span class="ni">📈</span><span data-key="sales">جرد المبيعات</span></button>
+    <button class="nav-btn" onclick="showPage('movements')" id="nav-movements"><span class="ni">🔄</span><span data-key="movements">سجل الحركات</span></button>
+  </div>
+  <div style="padding:0 6px">
     <div class="nav-lbl" data-key="secOps">العمليات</div>
     <button class="nav-btn" onclick="showPage('addstock')" id="nav-addstock"><span class="ni">➕</span><span data-key="addstock">إضافة مخزون</span></button>
     <button class="nav-btn" onclick="showPage('withdraw')" id="nav-withdraw"><span class="ni">➖</span><span data-key="withdraw">سحب مخزون</span></button>
     <button class="nav-btn" onclick="showPage('returns')" id="nav-returns"><span class="ni">↩️</span><span data-key="returns">المرتجعات</span></button>
     <button class="nav-btn" onclick="showPage('transfer')" id="nav-transfer"><span class="ni">🔀</span><span data-key="transfer">نقل بين المستودعات</span></button>
-  </div>
-  <div style="padding:0 6px">
-    <div class="nav-lbl" data-key="secSales">المبيعات</div>
-    <button class="nav-btn" onclick="showPage('invoice')" id="nav-invoice"><span class="ni">🧾</span><span data-key="invoice">فاتورة عميل</span></button>
-    <button class="nav-btn" onclick="showPage('sales')" id="nav-sales"><span class="ni">📈</span><span data-key="sales">جرد المبيعات</span></button>
-    <button class="nav-btn" onclick="showPage('movements')" id="nav-movements"><span class="ni">🔄</span><span data-key="movements">سجل الحركات</span></button>
   </div>
   <div style="padding:0 6px">
     <div class="nav-lbl" data-key="secMgmt">الإدارة</div>
@@ -1663,6 +1689,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
       <span class="ni">🌿</span><span data-key="sprayReminderPage">وقت العلاج</span>
       <span class="nav-badge" id="spray-badge" style="display:none;background:#E65100">!</span>
     </button>
+    <button class="nav-btn" onclick="showPage('appmanage')" id="nav-appmanage"><span class="ni">⚙️</span><span>إدارة التطبيق</span></button>
     <button class="nav-btn" onclick="openFullBackupModal()" id="nav-backupdata"><span class="ni">💾</span><span data-key="navBackupData">النسخة الاحتياطية</span></button>
   </div>
 </nav>
@@ -1972,6 +1999,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
     <div class="ph">
       <span class="pt" id="lbl-mov-t" data-key="movements">🔄 سجل الحركات</span>
       <div style="display:flex;gap:6px">
+        <input id="movSearch" type="search" placeholder="🔍 بحث في الحركات: الدواء، الموقع، النوع..." oninput="renderMovements()" style="min-width:190px;padding:6px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px">
         <select id="movFilter" onchange="renderMovements()" style="padding:6px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px"></select>
         <button class="btn bxl bsm" onclick="exportMovementsExcel()">📥 Excel</button>
       </div>
@@ -2290,6 +2318,14 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
           <input type="text" id="cust-phone" placeholder="+90 555 000 0000">
         </div>
         <div class="fgr">
+          <label id="lbl-cf-national">الرقم الوطني / T.C. Kimlik No</label>
+          <input type="text" id="cust-national-id" inputmode="numeric" maxlength="20" placeholder="الرقم الوطني">
+        </div>
+        <div class="fgr">
+          <label id="lbl-cf-area">مساحة الأرض (دونم)</label>
+          <input type="number" id="cust-area" min="0" step="0.01" placeholder="مثال: 12.5">
+        </div>
+        <div class="fgr">
           <label id="lbl-cf-region">المنطقة</label>
           <select id="cust-region">
             <option value="" id="cust-region-choose">-- اختر --</option>
@@ -2306,6 +2342,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         </div>
       </div>
       <input type="hidden" id="cust-edit-id" value="">
+      <input type="hidden" id="cust-legacy-name" value="">
       <div style="margin-top:14px;display:flex;gap:8px">
         <button class="btn bp" onclick="submitCustomer()" id="btn-cust-ok">✅ حفظ العميل</button>
         <button class="btn bs" onclick="clearCustomerForm()" id="btn-cust-clear">مسح</button>
@@ -3490,6 +3527,23 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
   </div>
 </div>
 
+<div id="page-appmanage" class="hidden">
+  <div class="ph"><span class="pt">⚙️ إدارة التطبيق</span></div>
+  <div class="panel" style="max-width:760px;margin:16px auto">
+    <div class="ph"><span class="pt">🖥️ إعدادات العرض</span></div>
+    <div class="pb" style="display:grid;gap:14px">
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>وضع العرض</span><select id="app-view-mode" class="form-control" style="max-width:240px" onchange="appSetView(this.value)"><option value="auto">تلقائي حسب الجهاز</option><option value="mobile">عرض الجوال</option><option value="desktop">عرض الحاسوب</option></select></label>
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>حجم الخط</span><select id="app-font-size" class="form-control" style="max-width:240px" onchange="appSetFont(this.value)"><option value="90">صغير</option><option value="100">متوسط</option><option value="110">كبير</option><option value="120">كبير جداً</option></select></label>
+      <div style="border-top:1px solid var(--gy2);padding-top:14px">
+        <b>ترتيب أزرار القوائم</b><p style="color:var(--gy6);font-size:12px">فعّل وضع الترتيب، ثم اسحب الزر إلى المكان المطلوب. يتم حفظ ترتيبك على هذا الجهاز.</p>
+        <button class="btn bp" id="nav-sort-toggle" onclick="appToggleSort()">✋ تفعيل ترتيب الأزرار</button>
+        <button class="btn bs" onclick="appResetNavOrder()" style="margin-inline-start:8px">↩️ استعادة الترتيب الأصلي</button>
+        <div id="nav-sort-status" style="font-size:12px;color:var(--gy6);margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </main>
 </div>
 <!-- EDIT PRODUCT MODAL -->
@@ -3590,7 +3644,7 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
         <div class="fg"><label>رقم الفاتورة</label><input id="ei-invno" class="ti" type="text" readonly style="opacity:.6"></div>
       </div>
       <div style="font-weight:600;margin-bottom:8px;font-size:13px">📦 الأصناف</div>
-      <div id="ei-rows-wrap" style="max-height:500px;overflow-y:auto;padding-right:2px"></div>
+      <div id="ei-rows-wrap" style="max-height:none;overflow:visible;padding-right:0"></div>
       <div style="margin-top:8px;text-align:right">
         <button onclick="eiAddRow()" style="background:#2E7D32;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;font-weight:700">➕ إضافة صنف جديد</button>
       </div>
@@ -5611,10 +5665,55 @@ function resetAllData() {
 }
 
 // تحميل البيانات عند الفتح
+// تعبئة أسعار الفواتير التاريخية التي لم يكن لها سعر مسجل
+// تُستخدم الأسعار الحالية من بطاقة الصنف المطابقة (الاسم + العبوة + المستودع)،
+// ولا يتم تغيير أي سعر تاريخي موجود بالفعل.
+function _autoFillMissingHistoricalInvoicePrices() {
+  var updated = 0;
+  var unmatched = 0;
+  if (!Array.isArray(salesLog) || !Array.isArray(db)) return {updated:0, unmatched:0};
+
+  salesLog.forEach(function(row) {
+    var oldPrice = Number(row.price);
+    // اعتبر السعر المفقود أو الصفري فقط غير مسعّر؛ لا نلمس الأسعار الموجودة.
+    if (row.price !== undefined && row.price !== null && row.price !== '' && isFinite(oldPrice) && oldPrice > 0) return;
+
+    var item = _findDbItem(row.name || '', row.pkg || '', Number(row.dep) || 1);
+    var currentPrice = item ? Number(item.price) : 0;
+    if (item && isFinite(currentPrice) && currentPrice > 0) {
+      row.price = currentPrice;
+      row.priceAutoFilled = true;
+      updated++;
+    } else {
+      unmatched++;
+    }
+  });
+
+  if (updated > 0) {
+    // يحفظ الأسعار المعبأة في قاعدة البيانات حتى لا نحتاج لإعادة العملية عند كل فتح.
+    saveAll();
+    console.info('Beydun: auto-filled missing prices in ' + updated + ' historical invoice rows.');
+  }
+  if (unmatched > 0) {
+    console.warn('Beydun: ' + unmatched + ' historical invoice rows still have no matching current product price.');
+  }
+  return {updated:updated, unmatched:unmatched};
+}
+
 loadAll().then(function() {
   // تحميل المستودعات وتزامنها أولاً قبل أي شيء
   try { loadWarehouses(); } catch(e) {}
   try { syncWarehousesToTX(); } catch(e) {}
+  // بعد تحميل المخزون والأسعار الحالية، عبّئ تلقائياً أسعار الفواتير القديمة المفقودة.
+  try {
+    var _priceFillResult = _autoFillMissingHistoricalInvoicePrices();
+    if (_priceFillResult.updated > 0) {
+      showToast('✅ تم إدخال أسعار حالية تلقائياً في ' + _priceFillResult.updated + ' صف من الفواتير السابقة');
+    }
+    if (_priceFillResult.unmatched > 0) {
+      console.warn('توجد أصناف في فواتير قديمة لا تملك سعراً حالياً مطابقاً؛ تُركت دون تغيير.');
+    }
+  } catch(e) { console.warn('Historical invoice price fill:', e); }
   // تطبيق اللغة المحفوظة على واجهة المستخدم
   try { applyLangUI(currentLang); } catch(e) {}
   refreshDepMaps();
@@ -6706,6 +6805,8 @@ function setLang(lang){
   });
   const cur=document.querySelector('.nav-btn.active');
   if(cur)renderPage(cur.id.replace('nav-',''));
+  // Re-apply exact Arabic/Turkish UI catalog after dynamic page rendering.
+  try{_translateStaticUI(lang);}catch(e){console.warn('UI language refresh:',e);}
   // عنوان وتبويبات صفحة التقارير
   const rptTitle=document.getElementById('rpt-title');
   if(rptTitle)rptTitle.textContent=lang==='tr'?'📄 Stok Raporu':'📄 تقرير المخزون';
@@ -6856,6 +6957,8 @@ function setLang(lang){
   const invCust=document.getElementById('inv-cust');if(invCust)invCust.placeholder=L2.invCustPh||'...';
   const rptSearch=document.getElementById('rptSearch');if(rptSearch)rptSearch.placeholder=L2.rptSearchPh||'...';
   const custName=document.getElementById('cust-name');if(custName)custName.placeholder=L2.custNamePh||'...';
+  const cn=document.getElementById('lbl-cf-national');if(cn)cn.textContent=currentLang==='ar'?'الرقم الوطني':'T.C. Kimlik No';
+  const ca=document.getElementById('lbl-cf-area');if(ca)ca.textContent=currentLang==='ar'?'مساحة الأرض (دونم)':'Arazi Alanı (Dönüm)';
   const custNotes=document.getElementById('cust-notes');if(custNotes)custNotes.placeholder=L2.custNotesPh||'...';
   const supName=document.getElementById('sup-name');if(supName)supName.placeholder=L2.supNamePh||'...';
   const supContact=document.getElementById('sup-contact');if(supContact)supContact.placeholder=L2.supContactPh||'...';
@@ -7343,6 +7446,7 @@ function renderPage(p){
     dose:()=>{if(typeof renderDosePage==='function')renderDosePage();},
     drugtypes:renderDrugTypesPage,
     sprayreminder:renderSprayReminderPage,
+    appmanage:appInitManagePage,
   }[p]||renderDashboard)();
 }
 
@@ -9961,9 +10065,23 @@ function showDrugMovHistory(name){
 }
 function renderMovements(){
   const ft=document.getElementById('movFilter')?.value||'';
-  const list=ft?movements.filter(m=>movTypeCode(m.type)===ft):movements;
+  const q=norm((document.getElementById('movSearch')?.value||'').trim());
+  const list=movements.filter(m=>{
+    if(ft && movTypeCode(m.type)!==ft) return false;
+    if(q && ![m.name,m.type,m.loc,m.by,m.notes,m.qty,m.date].some(v=>norm(String(v??'')).includes(q))) return false;
+    return true;
+  });
+  // سجل الحركات يرتب حسب تاريخ الحركة الفعلي، وليس حسب وقت إدخال السجل.
+  // يدعم YYYY-MM-DD و DD/MM/YYYY، مع إبقاء الأحدث أولاً.
+  function _movementDateKey(value){
+    if(!value) return 0;
+    var v=String(value).trim(), m;
+    if((m=v.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/))) return new Date(+m[1],+m[2]-1,+m[3]).getTime();
+    if((m=v.match(/^(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})/))) return new Date(+m[3],+m[2]-1,+m[1]).getTime();
+    var parsed=Date.parse(v); return Number.isFinite(parsed)?parsed:0;
+  }
   const el=document.getElementById('movTh');if(el)el.innerHTML=T('tblMov').map(hdr=>`<th>${hdr}</th>`).join('');
-    var _movList=[...list].reverse();
+  var _movList=[...list].map((m,i)=>({m,i})).sort((a,b)=>_movementDateKey(b.m.date)-_movementDateKey(a.m.date)||(Number(b.m.ts||b.m.createdAt||0)-Number(a.m.ts||a.m.createdAt||0))||b.i-a.i).map(x=>x.m);
   var MOV_PAGE=250;
   function _movRow(m){const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
     return`<tr><td>${fmtDate(m.date)}</td><td><strong class="mov-drug-link" onclick="showDrugMovHistory('${h(m.name)}')" style="cursor:pointer;color:var(--b7);text-decoration:underline" title="${currentLang==='ar'?'عرض سجل الدواء':'İlaç geçmişini gör'}">${h(m.name)}</strong></td>
@@ -12107,11 +12225,12 @@ function renderCustomersList(){
     const lastDate    = sales.length ? sales.sort((a,b)=>b.date.localeCompare(a.date))[0].date : '—';
     const invoices    = [...new Set(sales.map(r=>r.invNo))].length;
     return { name, reg, totalBought, totalRet, lastDate, invoices,
-      phone: reg?.phone||'—', region: reg?.region || (sales[0]?.region||'—'), notes: reg?.notes||'' };
+      phone: reg?.phone||'—', nationalId:reg?.nationalId||reg?.nationalID||'', area:reg?.area||reg?.landArea||0, region: reg?.region || (sales[0]?.region||'—'), notes: reg?.notes||'' };
   });
 
-  if(q) list = list.filter(x=>norm(x.name).includes(q)||(x.phone||'').includes(q)||norm(x.region||'').includes(q));
-  list.sort((a,b)=>b.totalBought-a.totalBought);
+  if(q) list = list.filter(x=>norm(x.name).includes(q)||(x.phone||'').includes(q)||(x.nationalId||'').includes(q)||norm(x.region||'').includes(q));
+  // سجل العملاء مرتب أبجدياً حسب الاسم، مع تجاهل اختلاف التشكيل وحالة الأحرف.
+  list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''), currentLang==='ar'?'ar':'tr', {sensitivity:'base', numeric:true}));
 
   const th = document.getElementById('custTh');
   if(th) th.innerHTML = (isAr
@@ -12141,11 +12260,8 @@ function renderCustomersList(){
     <td>
       <div style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn bsm bp" onclick="openCustomerHistory('${encodeURIComponent(c.name)}')" title="${isAr?'سجل العميل':'Geçmiş'}">📋</button>
-        ${c.reg
-          ? `<button class="btn bsm bam" onclick="editCustomer(${c.reg.id})" title="${isAr?'تعديل':'Düzenle'}">✏️</button>
-             <button class="btn bsm bd" onclick="deleteCustomer(${c.reg.id})" title="${isAr?'حذف':'Sil'}">🗑️</button>`
-          : `<button class="btn bsm btl" onclick="registerGuestCustomer('${encodeURIComponent(c.name)}','${encodeURIComponent(c.region)}')" title="${isAr?'تسجيل':'Kaydet'}" style="background:#e0f2f1;color:#00695C">➕</button>`
-        }
+        <button class="btn bsm bam" onclick="editCustomerByName('${encodeURIComponent(c.name)}','${encodeURIComponent(c.region)}')" title="${isAr?'تعديل بيانات العميل':'Müşteriyi düzenle'}">✏️ ${isAr?'تعديل':'Düzenle'}</button>
+        ${c.reg ? `<button class="btn bsm bd" onclick="deleteCustomer(${c.reg.id})" title="${isAr?'حذف':'Sil'}">🗑️</button>` : ''}
       </div>
     </td>
   </tr>`).join('')
@@ -12271,22 +12387,61 @@ function submitCustomer(){
   const data = {
     name,
     phone:  document.getElementById('cust-phone').value.trim(),
+    nationalId: document.getElementById('cust-national-id')?.value.trim()||'',
+    area: Math.max(0,parseFloat(document.getElementById('cust-area')?.value)||0),
     region: document.getElementById('cust-region').value,
     notes:  document.getElementById('cust-notes').value.trim(),
   };
+  const legacyName = document.getElementById('cust-legacy-name')?.value || '';
   if(editId){
     const c = customers.find(x=>x.id===editId);
+    const oldName = c?.name || '';
     if(c) Object.assign(c, data);
+    // Keep historical invoices/returns linked if the customer name is edited.
+    if(oldName && oldName !== name){
+      (salesLog||[]).forEach(r=>{if(r.customer===oldName) r.customer=name;});
+      (returnsLog||[]).forEach(r=>{if(r.customer===oldName) r.customer=name;});
+    }
     showToast(isAr?`✅ تم تحديث ${name}`:`✅ ${name} güncellendi`);
   } else {
     const newId = _maxId(customers)+1;
     customers.push({id:newId,...data,createdAt:todayStr()});
-    showToast(isAr?`✅ تمت إضافة ${name}`:`✅ ${name} eklendi`);
+    // When editing a guest shown from historical sales, keep it linked to the
+    // existing customer history instead of creating a disconnected new name.
+    if(legacyName && legacyName !== name){
+      (salesLog||[]).forEach(r=>{if(r.customer===legacyName) r.customer=name;});
+      (returnsLog||[]).forEach(r=>{if(r.customer===legacyName) r.customer=name;});
+    }
+    showToast(legacyName ? (isAr?`✅ تم تحديث بيانات ${name}`:`✅ ${name} güncellendi`) : (isAr?`✅ تمت إضافة ${name}`:`✅ ${name} eklendi`));
   }
   saveAll();
   clearCustomerForm();
   renderCustomersList();
   updateCustDatalist();
+  // تحديث مؤشرات الجرعات التاريخية فور حفظ مساحة الدونم الجديدة.
+  // إعادة رسم قائمة الجرعات والحاسبة إذا كانت مفتوحة، دون تغيير جرعة المنتج المسجلة.
+  if(typeof renderDoseMedList==='function') renderDoseMedList();
+  const dosePage=document.getElementById('page-dose');
+  if(dosePage && !dosePage.classList.contains('hidden')){
+    if(typeof smartCalcDose==='function') smartCalcDose();
+    if(typeof renderDoseMedList==='function' && _currentDoseTab==='meds') renderDoseMedList();
+  }
+}
+
+function editCustomerByName(encodedName, encodedRegion){
+  const name=decodeURIComponent(encodedName||'');
+  const existing=customers.find(c=>c.name===name);
+  if(existing){ editCustomer(existing.id); return; }
+  // A customer present in old sales but not yet registered: open the same form
+  // prefilled with their historical name so area/phone/ID can be added.
+  clearCustomerForm();
+  const legacy=document.getElementById('cust-legacy-name'); if(legacy) legacy.value=name;
+  const nm=document.getElementById('cust-name'); if(nm) nm.value=name;
+  const rg=document.getElementById('cust-region'); if(rg) rg.value=decodeURIComponent(encodedRegion||'')==='—'?'':decodeURIComponent(encodedRegion||'');
+  const title=document.getElementById('lbl-cust-form-t');
+  if(title) title.textContent=currentLang==='ar'?'✏️ استكمال بيانات العميل':'✏️ Müşteri bilgilerini tamamla';
+  const cancelBtn=document.getElementById('btn-cancel-cust'); if(cancelBtn) cancelBtn.style.display='';
+  const panel=document.getElementById('cust-form-panel'); if(panel) panel.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function editCustomer(id){
@@ -12294,6 +12449,8 @@ function editCustomer(id){
   if(!c) return;
   document.getElementById('cust-name').value   = c.name;
   document.getElementById('cust-phone').value  = c.phone||'';
+  if(document.getElementById('cust-national-id')) document.getElementById('cust-national-id').value=c.nationalId||c.nationalID||'';
+  if(document.getElementById('cust-area')) document.getElementById('cust-area').value=c.area||c.landArea||'';
   document.getElementById('cust-region').value = c.region||'';
   document.getElementById('cust-notes').value  = c.notes||'';
   document.getElementById('cust-edit-id').value = id;
@@ -12308,7 +12465,7 @@ function editCustomer(id){
 function cancelEditCustomer(){ clearCustomerForm(); }
 
 function clearCustomerForm(){
-  ['cust-name','cust-phone','cust-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['cust-name','cust-phone','cust-notes','cust-national-id','cust-area','cust-legacy-name'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('cust-edit-id').value='';
   document.getElementById('cust-region').value='';
   const isAr=currentLang==='ar';
@@ -13165,6 +13322,22 @@ function saveDoseToHistory(){
 }
 
 // ── Dose med list (meds tab) ───────────────────
+function getObservedDosePerDunum(med){
+  // Empirical sales quantity per registered customer dunum; not a label dose or safety recommendation.
+  const samples=[];
+  (salesLog||[]).forEach(r=>{
+    const sameName=norm(r.itemName||r.name)===norm(med.name);
+    const samePkg=!r.pkg||!med.pkg||norm(r.pkg)===norm(med.pkg);
+    if(!sameName||!samePkg) return;
+    const cust=(customers||[]).find(c=>norm(c.name)===norm(r.customer));
+    const area=Number(cust?.area||cust?.landArea||0), qty=Number(r.qty||0);
+    if(area>0&&qty>0) samples.push({rate:qty/area,area,qty});
+  });
+  if(!samples.length) return null;
+  const vals=samples.map(x=>x.rate).sort((a,b)=>a-b);
+  return {avg:vals.reduce((a,b)=>a+b,0)/vals.length,min:vals[0],max:vals[vals.length-1],count:vals.length};
+}
+
 function renderDoseMedList(){
   const q=norm(document.getElementById('doseListSearch')?.value||'');
   const seen=new Set();const uniqueMeds=[];
@@ -13215,9 +13388,11 @@ function renderDoseMedList(){
       urefHtml+='</div>';
     }
 
+    const observed=getObservedDosePerDunum(x);
+    const observedHtml=observed?`<div style="margin-top:5px;padding:6px 8px;border-radius:7px;background:#FFF8E1;color:#795548;font-size:10px;line-height:1.7"><strong>📊 ${isAr?'من سجل الصرف لكل دونم (عبوة/دونم)':'Geçmiş satış / dönüm (paket/dönüm)'}</strong><br>${isAr?'متوسط':'متوسط'}: ${observed.avg.toFixed(2)} · ${isAr?'أقل':'أقل'}: ${observed.min.toFixed(2)} · ${isAr?'أعلى':'أعلى'}: ${observed.max.toFixed(2)}<br><span style="color:#8D6E63">${isAr?'عدد السجلات':'Kayıt'}: ${observed.count} — ${isAr?'تقدير تاريخي وليس جرعة موصى بها':'Geçmiş tahmin; önerilen doz değildir'}</span></div>`:`<div style="margin-top:4px;font-size:10px;color:var(--gy5)">${isAr?'لا توجد بيانات كافية: أضف مساحة الدونم للعملاء':'Yeterli veri yok: müşteri dönüm alanı girin'}</div>`;
     return`<tr>
       <td style="color:var(--gy5)">${i+1}</td>
-      <td><strong>${h(x.name)}</strong>${urefHtml}</td>
+      <td><strong>${h(x.name)}</strong>${urefHtml}${observedHtml}</td>
       <td><span class="bdg bb2">${h(x.pkg)}</span></td>
       <td>${typeLabel}</td>
       <td style="font-weight:700;color:var(--g8);font-size:11px">${h(doseLabel)}</td>
@@ -13817,11 +13992,7 @@ setInterval(_updateAlertsBadge, 60000);
 <!-- Mobile Action Sheet (backup/export/import buttons) -->
 <div class="mob-overlay" id="mob-actions-overlay" onclick="closeMobActions()"></div>
 
-<!-- Desktop View Toggle Button -->
-<button class="desktop-toggle-btn" id="desktop-toggle-btn" onclick="toggleDesktopMode()">
-  <span id="desktop-toggle-icon">🖥️</span>
-  <span id="desktop-toggle-label">عرض سطح المكتب</span>
-</button>
+<!-- Desktop quick-toggle removed: view mode remains configurable in إدارة التطبيق. -->
 <div class="mob-actions-sheet" id="mob-actions-sheet">
   <div class="mob-sheet-handle" onclick="closeMobActions()"></div>
   <div class="mob-sheet-title" id="mob-sheet-main-title">⚙️ الإجراءات</div>
@@ -13898,6 +14069,27 @@ setInterval(_updateAlertsBadge, 60000);
 </nav>
 
 <script>
+
+// App management preferences: persisted locally, without touching business records.
+var _appSortEnabled=false, _appDragged=null;
+function appSetView(v){
+  if(v==='desktop'){document.body.classList.add('force-desktop');localStorage.setItem('beydun_desktop','1');}
+  else if(v==='mobile'){document.body.classList.remove('force-desktop');localStorage.setItem('beydun_desktop','0');}
+  else {document.body.classList.remove('force-desktop');localStorage.removeItem('beydun_desktop');}
+  if(typeof _updateDesktopToggleLabel==='function')_updateDesktopToggleLabel();
+}
+function appSetFont(v){['90','100','110','120'].forEach(x=>document.body.classList.remove('app-font-'+x));if(v!=='100')document.body.classList.add('app-font-'+v);localStorage.setItem('beydun_app_font',v);}
+function appInitManagePage(){var v=document.getElementById('app-view-mode');if(v)v.value=localStorage.getItem('beydun_desktop')==='1'?'desktop':(localStorage.getItem('beydun_desktop')==='0'?'mobile':'auto');var f=document.getElementById('app-font-size');if(f)f.value=localStorage.getItem('beydun_app_font')||'100';appApplyNavOrder();}
+function appToggleSort(){_appSortEnabled=!_appSortEnabled;document.querySelectorAll('.sidebar .nav-btn').forEach(function(b){b.draggable=_appSortEnabled;b.classList.toggle('app-sortable',_appSortEnabled);});var t=document.getElementById('nav-sort-toggle');if(t)t.textContent=_appSortEnabled?'✅ إنهاء ترتيب الأزرار':'✋ تفعيل ترتيب الأزرار';var st=document.getElementById('nav-sort-status');if(st)st.textContent=_appSortEnabled?'اسحب الأزرار وضعها في المكان الجديد.':'تم حفظ ترتيب الأزرار.';}
+function appApplyNavOrder(){try{var o=JSON.parse(localStorage.getItem('beydun_nav_order')||'{}');Object.keys(o).forEach(function(id){var el=document.getElementById(id),parent=el&&el.parentElement;if(el&&parent){var next=document.getElementById(o[id]);if(next&&next.parentElement===parent)parent.insertBefore(el,next);}});}catch(e){}}
+function appResetNavOrder(){localStorage.removeItem('beydun_nav_order');location.reload();}
+document.addEventListener('dragstart',function(e){var b=e.target.closest('.sidebar .nav-btn');if(!_appSortEnabled||!b)return;_appDragged=b;e.dataTransfer.setData('text/plain',b.id);});
+document.addEventListener('dragover',function(e){var b=e.target.closest('.sidebar .nav-btn');if(_appSortEnabled&&b&&_appDragged&&b!==_appDragged){e.preventDefault();b.classList.add('app-drop-target');}});
+document.addEventListener('dragleave',function(e){var b=e.target.closest('.sidebar .nav-btn');if(b)b.classList.remove('app-drop-target');});
+document.addEventListener('drop',function(e){var b=e.target.closest('.sidebar .nav-btn');if(!_appSortEnabled||!b||!_appDragged||b===_appDragged)return;e.preventDefault();b.classList.remove('app-drop-target');if(b.parentElement===_appDragged.parentElement)b.parentElement.insertBefore(_appDragged,b);var order={};document.querySelectorAll('.sidebar .nav-btn').forEach(function(x,i){var n=x.nextElementSibling;while(n&& !n.classList.contains('nav-btn'))n=n.nextElementSibling;order[x.id]=n?n.id:null;});localStorage.setItem('beydun_nav_order',JSON.stringify(order));_appDragged=null;});
+document.addEventListener('dragend',function(){document.querySelectorAll('.app-drop-target').forEach(x=>x.classList.remove('app-drop-target'));_appDragged=null;});
+(function(){var f=localStorage.getItem('beydun_app_font')||'100';if(f!=='100')document.body.classList.add('app-font-'+f);})();
+
 // ── Desktop / Mobile Toggle ─────────────────────
 (function(){
   // Restore saved preference
@@ -14167,10 +14359,10 @@ function _eiRenderRows() {
     html += '<div style="border:1px solid #e0e0e0;border-radius:8px;margin-bottom:10px;overflow:hidden">';
 
     // ── صف البيانات الأساسية ──
-    html += '<div style="display:grid;grid-template-columns:1fr 65px 75px 55px 32px;gap:4px;padding:8px;background:#fafafa;align-items:start">';
+    html += '<div class="ei-main-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 42px;gap:8px;padding:12px;background:#f8fafc;align-items:end">';
 
     // الدواء
-    html += '<div>';
+    html += '<div style="grid-column:1 / -1;min-width:0">';
     html += '<input list="ei-drug-list" value="' + h(drugVal) + '" id="ei-drug-' + i + '" ';
     html += 'onchange="_eiDrugChange(' + i + ', this.value)" ';
     html += 'placeholder="' + (isAr ? 'الدواء — العبوة' : 'İlaç — Ambalaj') + '" ';
@@ -14205,6 +14397,15 @@ function _eiRenderRows() {
     html += '</div>';
 
     html += '</div>'; // end grid
+
+    // اختيار المستودع لكل صنف في الفاتورة
+    var eiWarehouseOpts = (Array.isArray(warehouses) ? warehouses : []).map(function(w) {
+      return '<option value="' + h(w.id) + '"' + (String(r.dep) === String(w.id) ? ' selected' : '') + '>' + h(currentLang === 'tr' ? w.nameTr : w.nameAr) + '</option>';
+    }).join('');
+    html += '<div style="padding:6px 8px;background:#eef5ff;border-top:1px solid #dbeafe">';
+    html += '<label for="ei-dep-' + i + '" style="display:block;font-size:11px;color:#174ea6;margin-bottom:3px;font-weight:700">🏬 ' + (isAr ? 'المستودع' : 'Depo') + '</label>';
+    html += '<select id="ei-dep-' + i + '" onchange="_eiWarehouseChange(' + i + ',this.value)" style="width:100%;padding:7px;border:1px solid #90CAF9;border-radius:6px;background:#fff;font-family:inherit;font-size:12px">' + eiWarehouseOpts + '</select>';
+    html += '</div>';
 
     // ── قسم الجرعة / مرجع الاستخدام ──
     html += '<div style="border-top:1px dashed #b0bec5;background:' + (hasUref ? '#e8f5e9' : '#f5f5f5') + '">';
@@ -14351,6 +14552,19 @@ function _eiUrefChange(i, field, val) {
   }
 }
 
+function _eiWarehouseChange(i, val) {
+  if (!_eiRows[i]) return;
+  _eiRows[i].dep = Number(val) || val;
+  var r = _eiRows[i];
+  var item = _findDbItem(r.name, r.pkg, r.dep);
+  // تحديث السعر تلقائياً فقط عند اختيار دواء/مستودع مطابق له سعر معروف
+  if (item && Number(item.price) > 0) {
+    r.price = Number(item.price);
+    var priceEl = document.getElementById('ei-price-' + i);
+    if (priceEl) priceEl.value = r.price;
+  }
+}
+
 function _eiDrugChange(i, val) {
   // تحليل "اسم — عبوة"
   var sep = val.indexOf(' — ');
@@ -14424,6 +14638,8 @@ function saveEditedInvoice() {
     r.qty   = parseInt((document.getElementById('ei-qty-' + i) || {}).value, 10) || 0;
     r.price = parseFloat((document.getElementById('ei-price-' + i) || {}).value) || 0;
     r.disc  = Math.min(100, Math.max(0, parseFloat((document.getElementById('ei-disc-' + i) || {}).value) || 0));
+    var depEl = document.getElementById('ei-dep-' + i);
+    if (depEl) r.dep = Number(depEl.value) || depEl.value;
 
     // قراءة حقول الجرعة / مرجع الاستخدام
     var _eiUrefTypeEl     = document.getElementById('ei-uref-type-' + i);
