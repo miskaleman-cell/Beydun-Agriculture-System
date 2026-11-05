@@ -28,12 +28,12 @@ const indexHtml = fs.readFileSync(INDEX_PATH, 'utf8');
 
 // يبحث عن أول عنوان فعلي بصيغة: ## 🏷️ BEYDUN AGRO V<رقم>
 // (محصور بالـ## ليتجاهل الإشارة التوضيحية لهذه الصيغة في أعلى الملف)
-const changelogMatch = changelog.match(/^##\s*🏷️?\s*BEYDUN AGRO V(\d+)/im);
+const changelogMatch = changelog.match(/^##\s*🏷️?\s*BEYDUN AGRO V(\d+(?:\.\d+)?)/im);
 if (!changelogMatch) fail('لم يُعثر على عنوان "BEYDUN AGRO V<رقم>" في CHANGELOG.md');
 const changelogVersion = changelogMatch[1];
 
 // يبحث عن: var APP_VERSION = '<رقم>';
-const appVersionMatch = indexHtml.match(/var\s+APP_VERSION\s*=\s*['"](\d+)['"]/);
+const appVersionMatch = indexHtml.match(/var\s+APP_VERSION\s*=\s*['"](\d+(?:\.\d+)?)['"]/);
 if (!appVersionMatch) fail("لم يُعثر على 'var APP_VERSION = ...' في index.html");
 const appVersion = appVersionMatch[1];
 

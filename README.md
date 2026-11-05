@@ -1,3 +1,5 @@
+BEYDUN AGRO — V20.6
+
 # Beydun Agriculture System — تطبيق PWA
 
 تم تجهيز التطبيق ليعمل كتطبيق ويب تقدمي (PWA) حقيقي وقابل للتثبيت، باستخدام شعار
@@ -84,3 +86,6 @@ const CACHE_NAME = 'beydun-agro-v2';   // كان v1
 **Chrome DevTools → Application tab → Manifest** و **Service Workers**،
 أو عبر أداة Lighthouse المدمجة في Chrome (تبويب Lighthouse → Run audit
 لقسم "Progressive Web App").
+
+### V20.3
+مراجعة إضافية للترجمة العربية والتركية، مع استكمال نصوص إدارة التطبيق، خيارات العرض وحجم الخط، وصفحة أنواع الأدوية والتراكيب والحقول المنسدلة.

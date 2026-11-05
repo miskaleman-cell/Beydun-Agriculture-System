@@ -73,6 +73,25 @@
  #mo-edit-inv .ei-main-grid>div:first-child{grid-column:1/-1!important}
  #mo-edit-inv .ei-main-grid input{font-size:16px!important}
 }
+
+/* V20.6: integrated dose/treatment workflow + phone layout */
+@media(max-width:700px){
+  #page-dose .dose-hero{padding:14px!important}
+  #page-dose #dtab-content-calc > div{grid-template-columns:1fr!important;gap:12px!important}
+  #page-dose .dose-med-list{max-height:240px!important}
+  #page-dose .dose-type-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #page-dose .dose-fields-row.cols2,#page-dose .dose-fields-row.cols3{grid-template-columns:1fr!important}
+  #page-dose .dose-results-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #page-dose .dose-tabs{width:100%;overflow-x:auto}
+  #page-dose .dose-tab{min-height:42px}
+  #page-drugtypes .panel{margin-inline:0!important}
+  #page-drugtypes .tw{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #page-drugtypes input,#page-drugtypes select,#page-dose input,#page-dose select{min-height:42px;max-width:100%;box-sizing:border-box}
+  #page-sprayreminder .panel{margin-inline:0!important}
+  #page-sprayreminder .tw{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #page-sprayreminder .spray-filters{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+}
+
 </style>
 <script>
 // ── CONSOLE POLYFILL — بعض متصفحات Android لا تدعم console.info/group/table
@@ -1410,6 +1429,35 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
   .sg{grid-template-columns:repeat(3,1fr)}
 }
 
+/* ── RETURNS PAGE LAYOUT ─────────────────────── */
+.returns-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+#page-returns .panel{min-width:0;overflow:hidden}
+#page-returns .pb{padding:16px}
+#page-returns .fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#page-returns .fgr{min-width:0}
+#page-returns .fgr input,#page-returns .fgr select,#page-returns .fgr textarea{width:100%;min-width:0}
+#page-returns .tw{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#page-returns table{min-width:560px;width:100%;border-collapse:collapse}
+#page-returns .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#page-returns .ph .pt{min-width:0;line-height:1.35}
+#page-returns .pb > div[style*="display:flex"]{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:768px){
+  .returns-layout{grid-template-columns:minmax(0,1fr);gap:14px}
+  #page-returns .pb{padding:13px}
+  #page-returns .fg{grid-template-columns:minmax(0,1fr);gap:10px}
+  #page-returns .fgr[style*="grid-column"]{grid-column:1/-1!important}
+  #page-returns .ph{padding:12px 14px}
+  #page-returns .ph .pt{font-size:14px}
+  #page-returns .ph .btn{flex:0 0 auto}
+  #page-returns .pb button.btn{min-height:42px;white-space:normal}
+  #page-returns .tw{border-radius:0 0 10px 10px}
+}
+@media(max-width:420px){
+  #page-returns .pb{padding:11px}
+  #page-returns .fgr label{font-size:12px}
+  #page-returns .ph .pt{font-size:13px}
+}
+
 /* ── RESPONSIVE: MOBILE ──────────────────────── */
 @media(max-width:768px){
   /* === HEADER === */
@@ -1689,7 +1737,7 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
       <span class="ni">🌿</span><span data-key="sprayReminderPage">وقت العلاج</span>
       <span class="nav-badge" id="spray-badge" style="display:none;background:#E65100">!</span>
     </button>
-    <button class="nav-btn" onclick="showPage('appmanage')" id="nav-appmanage"><span class="ni">⚙️</span><span>إدارة التطبيق</span></button>
+    <button class="nav-btn" onclick="showPage('appmanage')" id="nav-appmanage"><span class="ni">⚙️</span><span data-key="appmanage">إدارة التطبيق</span></button>
     <button class="nav-btn" onclick="openFullBackupModal()" id="nav-backupdata"><span class="ni">💾</span><span data-key="navBackupData">النسخة الاحتياطية</span></button>
   </div>
 </nav>
@@ -1878,7 +1926,7 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
 
 <!-- RETURNS -->
 <div id="page-returns" class="hidden">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="returns-layout">
     <div class="panel">
       <div class="ph" style="background:linear-gradient(to left,#E65100,#F57C00)">
         <span class="pt" style="color:#fff" id="lbl-ret-t" data-key="returns">↩️ تسجيل مرتجع</span></div>
@@ -3528,9 +3576,9 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
 </div>
 
 <div id="page-appmanage" class="hidden">
-  <div class="ph"><span class="pt">⚙️ إدارة التطبيق</span></div>
+  <div class="ph"><span class="pt" data-key="appmanageTitle">⚙️ إدارة التطبيق</span></div>
   <div class="panel" style="max-width:760px;margin:16px auto">
-    <div class="ph"><span class="pt">🖥️ إعدادات العرض</span></div>
+    <div class="ph"><span class="pt" data-key="appViewSettings">🖥️ إعدادات العرض</span></div>
     <div class="pb" style="display:grid;gap:14px">
       <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>وضع العرض</span><select id="app-view-mode" class="form-control" style="max-width:240px" onchange="appSetView(this.value)"><option value="auto">تلقائي حسب الجهاز</option><option value="mobile">عرض الجوال</option><option value="desktop">عرض الحاسوب</option></select></label>
       <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>حجم الخط</span><select id="app-font-size" class="form-control" style="max-width:240px" onchange="appSetFont(this.value)"><option value="90">صغير</option><option value="100">متوسط</option><option value="110">كبير</option><option value="120">كبير جداً</option></select></label>
@@ -4401,7 +4449,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = 'V16';
+var APP_VERSION = '20.6';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -5831,6 +5879,7 @@ const TX={
     allDeps:'الكل مجتمعاً',addstock:'إضافة مخزون',withdraw:'سحب مخزون',returns:'المرتجعات',transfer:'نقل بين المستودعات',suppliers:'إدارة الموردين',purchases:'فواتير الشراء',
     invoice:'فاتورة عميل',sales:'جرد المبيعات',movements:'سجل الحركات',audit:'سجل التعديلات',reports:'التقارير',prices:'إدارة الأسعار',pricelist:'لائحة الأسعار',customers:'سجل العملاء',products:'إدارة المنتجات',whmgr:'إدارة المستودعات',
     secMain:'الرئيسية',secDeps:'المستودعات',secOps:'العمليات',secSales:'المبيعات',secMgmt:'الإدارة',
+    appmanage:'إدارة التطبيق',appmanageTitle:'⚙️ إدارة التطبيق',appViewSettings:'🖥️ إعدادات العرض',
     dep:'المستودع',med:'الدواء',qty:'الكمية',resp:'المسؤول',notes:'ملاحظات',purpose:'الغرض',supplier:'المورد',buyPrice:'سعر الشراء ₺',
     trFrom:'من المستودع',trTo:'إلى المستودع',trLog:'📋 سجل النقل',confirmTransfer:'🔀 تأكيد النقل',
     cust:'اسم الزبون',retMed:'الدواء المرتجع',invRef:'رقم الفاتورة',reason:'السبب',region:'المنطقة',tax:'الضريبة %',invNo:'رقم الفاتورة',date:'التاريخ',clear:'مسح',
@@ -5844,7 +5893,7 @@ const TX={
     tblStock:['#','اسم الدواء','التغليف','المستودع','الكمية','السعر ₺','القيمة ₺'],
     tblWh:['#','اسم الدواء','التغليف','الكمية','السعر ₺','القيمة ₺'],
     tblRet:['التاريخ','الزبون','الدواء','الكمية','الفاتورة','السبب'],
-    tblInv:['#','اسم الدواء','العبوة','الكمية','سعر الوحدة ₺','خصم %','الإجمالي ₺',''],
+    tblInv:['#','اسم الدواء','العبوة','الكمية','سعر الوحدة ₺','الإجمالي ₺',''],
     tblSales:['التاريخ','الفاتورة','العميل','المنطقة','الدواء','الكمية','السعر','خصم%','الإجمالي ₺','⚙️'],
     tblMov:['التاريخ','الدواء','العملية','الكمية','الموقع','المسؤول','ملاحظات'],
     tblPrice:['اسم الدواء','العبوة','المستودع','المخزون','السعر ₺','القيمة ₺','إجراء'],
@@ -5984,7 +6033,7 @@ const TX={
     supHistTitleTr:'سجل المشتريات',
     epmInfoTxt:'ℹ️ يمكنك تعديل اسم الدواء أو العبوة أو المستودع. سيتم تحديث السجلات تلقائياً.',
     epmNameLabel:'اسم الدواء',
-    custNamePh:'اسم العميل الكامل',
+    custNamePh:'اسم العميل الكامل', custNationalPh:'الرقم الوطني', custAreaPh:'مثال: 12.5',
     custNotesPh:'أي ملاحظات عن العميل...',
     supNamePh:'اسم الشركة أو المورد',
     supContactPh:'اسم المندوب',
@@ -5998,7 +6047,7 @@ const TX={
     invCustPh:'اكتب أو اختر...',
     rptSearchPh:'بحث بالاسم...',
     // Customer form labels
-    cfNameLabel:'اسم العميل *', cfPhoneLabel:'رقم الهاتف', cfRegionLabel:'المنطقة',
+    cfNameLabel:'اسم العميل *', cfPhoneLabel:'رقم الهاتف', cfNationalLabel:'الرقم الوطني', cfAreaLabel:'مساحة الأرض (دونم)', cfRegionLabel:'المنطقة',
     cfNotesLabel:'ملاحظات', saveCustBtn:'✅ حفظ العميل', clearBtn:'مسح',
     regionChooseOpt:'-- اختر --', regionOther:'أخرى',
     // Supplier form labels
@@ -6132,6 +6181,7 @@ const TX={
     allDeps:'Tüm Depolar',addstock:'Stok Ekle',withdraw:'Stok Çek',returns:'İadeler',transfer:'Depolar Arası Transfer',suppliers:'Tedarikçi Yönetimi',purchases:'Alım Faturaları',
     invoice:'Müşteri Faturası',sales:'Satış Raporu',movements:'Hareket Kaydı',audit:'Düzenleme Kayıtları',reports:'Raporlar',prices:'Fiyat Yönetimi',pricelist:'Fiyat Listesi',customers:'Müşteri Kaydı',products:'Ürün Yönetimi',whmgr:'Depo Yönetimi',
     secMain:'ANA SAYFA',secDeps:'DEPOLAR',secOps:'İŞLEMLER',secSales:'SATIŞLAR',secMgmt:'YÖNETİM',
+    appmanage:'Uygulama Yönetimi',appmanageTitle:'⚙️ Uygulama Yönetimi',appViewSettings:'🖥️ Görüntü Ayarları',
     dep:'Depo',med:'İlaç',qty:'Miktar',resp:'Sorumlu',notes:'Notlar',purpose:'Amaç',supplier:'Tedarikçi',buyPrice:'Alış Fiyatı ₺',
     trFrom:'Kaynak Depo',trTo:'Hedef Depo',trLog:'📋 Transfer Kaydı',confirmTransfer:'🔀 Transferi Onayla',
     cust:'Müşteri Adı',retMed:'İade İlaç',invRef:'Fatura No',reason:'Sebep',region:'Bölge',tax:'Vergi %',invNo:'Fatura No',date:'Tarih',clear:'Temizle',
@@ -6145,7 +6195,7 @@ const TX={
     tblStock:['#','İLAÇ ADI','AMBALAJ','DEPO','TOPLAM','FİYAT ₺','DEĞER ₺'],
     tblWh:['#','İLAÇ ADI','AMBALAJ','TOPLAM','FİYAT ₺','DEĞER ₺'],
     tblRet:['Tarih','Müşteri','İlaç','Miktar','Fatura','Sebep'],
-    tblInv:['#','İlaç Adı','Ambalaj','Miktar','Birim Fiyat ₺','İndirim %','Toplam ₺',''],
+    tblInv:['#','İlaç Adı','Ambalaj','Miktar','Birim Fiyat ₺','Toplam ₺',''],
     tblSales:['Tarih','Fatura','Müşteri','Bölge','İlaç','Miktar','Fiyat','İndirim%','Toplam ₺','⚙️'],
     tblMov:['Tarih','İlaç','İşlem','Miktar','Konum','Sorumlu','Notlar'],
     tblPrice:['İlaç Adı','Ambalaj','Depo','Stok','Fiyat ₺','Değer ₺','İşlem'],
@@ -6285,7 +6335,7 @@ const TX={
     supHistTitleTr:'Alım Geçmişi',
     epmInfoTxt:'ℹ️ İlaç adını, ambalajı veya depoyu düzenleyebilirsiniz. Kayıtlar otomatik güncellenecektir.',
     epmNameLabel:'İlaç Adı',
-    custNamePh:'Müşterinin tam adı',
+    custNamePh:'Müşterinin tam adı', custNationalPh:'T.C. Kimlik numarası', custAreaPh:'Örn: 12,5',
     custNotesPh:'Müşteri hakkında notlar...',
     supNamePh:'Şirket veya tedarikçi adı',
     supContactPh:'Temsilci adı',
@@ -6299,7 +6349,7 @@ const TX={
     invCustPh:'Yaz veya seç...',
     rptSearchPh:'İsme göre ara...',
     // Customer form labels
-    cfNameLabel:'Müşteri Adı *', cfPhoneLabel:'Telefon', cfRegionLabel:'Bölge',
+    cfNameLabel:'Müşteri Adı *', cfPhoneLabel:'Telefon', cfNationalLabel:'T.C. Kimlik No', cfAreaLabel:'Arazi Alanı (Dönüm)', cfRegionLabel:'Bölge',
     cfNotesLabel:'Notlar', saveCustBtn:'✅ Müşteriyi Kaydet', clearBtn:'Temizle',
     regionChooseOpt:'-- Seçin --', regionOther:'Diğer',
     // Supplier form labels
@@ -6752,7 +6802,24 @@ const _EXTRA_UI_TR={
   '🧬 أحماض أمينية':'🧬 Amino Asitler','💧 ناشر / لاصق':'💧 Yayıcı / Yapıştırıcı',
   '💠 زنك (Zinc)':'💠 Çinko (Zinc)','🟣 بور (Boron)':'🟣 Bor (Boron)',
   '🔩 حديد (Iron)':'🔩 Demir (Iron)','🟤 نحاس (Copper)':'🟤 Bakır (Copper)',
-  '🟡 كبريت (Sulfur)':'🟡 Kükürt (Sulfur)'
+  '🟡 كبريت (Sulfur)':'🟡 Kükürt (Sulfur)',
+  '⚙️ إدارة التطبيق':'⚙️ Uygulama Yönetimi','🖥️ إعدادات العرض':'🖥️ Görüntü Ayarları',
+  'وضع العرض':'Görünüm Modu','تلقائي حسب الجهاز':'Cihaza göre otomatik',
+  'عرض الجوال':'Mobil görünüm','عرض الحاسوب':'Masaüstü görünümü',
+  'حجم الخط':'Yazı Boyutu','صغير':'Küçük','متوسط':'Orta','كبير':'Büyük','كبير جداً':'Çok Büyük',
+  'ترتيب أزرار القوائم':'Menü Düğmelerini Sırala',
+  'فعّل وضع الترتيب، ثم اسحب الزر إلى المكان المطلوب. يتم حفظ ترتيبك على هذا الجهاز.':'Sıralama modunu etkinleştirin, ardından düğmeyi istediğiniz yere sürükleyin. Sıralamanız bu cihazda kaydedilir.',
+  '✋ تفعيل ترتيب الأزرار':'✋ Düğme Sıralamasını Etkinleştir',
+  '↩️ استعادة الترتيب الأصلي':'↩️ Varsayılan Sıralamayı Geri Yükle',
+  'اختر نوع العنصر الغذائي / الكيميائي:':'Besin / kimyasal element türünü seçin:',
+  '— اختر النوع —':'— Tür seçin —',
+  'اختر المادة الفعّالة / التركيب الكيميائي:':'Etken madde / kimyasal bileşimi seçin:',
+  '— اختر المادة الفعّالة —':'— Etken madde seçin —',
+  '— اختر نوع المرض/الآفة —':'— Hastalık / zararlı türünü seçin —',
+  'الرقم الوطني':'T.C. Kimlik No','مساحة الأرض (دونم)':'Arazi Alanı (Dönüm)',
+  'مثال: 20 LT':'Örn: 20 LT','اكتب أو اختر...':'Yazın veya seçin...',
+  'ابحث باسم الدواء...':'İlaç adına göre arayın...','ابحث عن دواء...':'İlaç arayın...',
+  'ملاحظات العميل...':'Müşteri notları...','اسم العميل الكامل':'Müşterinin tam adı'
 };
 function _translateStaticUI(lang){
   const pairs={};
@@ -6760,6 +6827,13 @@ function _translateStaticUI(lang){
   else _collectLangPairs(TX.tr,TX.ar,pairs);
   if(lang==='tr') Object.assign(pairs,_EXTRA_UI_TR);
   else Object.keys(_EXTRA_UI_TR).forEach(k=>{pairs[_EXTRA_UI_TR[k]]=k;});
+  // Explicit labels for the app-management screen; these controls are static HTML,
+  // so translate their visible text and option labels in both directions.
+  const appLabels={
+    'app-view-mode':{auto:['تلقائي حسب الجهاز','Cihaza göre otomatik'],mobile:['عرض الجوال','Mobil görünüm'],desktop:['عرض الحاسوب','Masaüstü görünümü']},
+    'app-font-size':{'90':['صغير','Küçük'],'100':['متوسط','Orta'],'110':['كبير','Büyük'],'120':['كبير جداً','Çok Büyük']}
+  };
+  Object.entries(appLabels).forEach(([id,opts])=>{const sel=document.getElementById(id);if(!sel)return;Array.from(sel.options).forEach(o=>{const pair=opts[o.value];if(pair)o.textContent=pair[lang==='tr'?1:0];});});
   const root=document.getElementById('root')||document.body;
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   const nodes=[];
@@ -6784,6 +6858,7 @@ function setLang(lang){
   document.getElementById('btn-lang-ar').classList.toggle('active',lang==='ar');
   document.getElementById('btn-lang-tr').classList.toggle('active',lang==='tr');
   const L=TX[lang];
+  const navApp=document.getElementById('nav-appmanage');if(navApp){const sp=navApp.querySelector('[data-key=appmanage]');if(sp)sp.textContent=L.appmanage|| (lang==='tr'?'Uygulama Yönetimi':'إدارة التطبيق');}
   document.getElementById('lbl-title').textContent=L.sysTitle;
   document.getElementById('lbl-sub').textContent=L.sysSub;
   document.querySelectorAll('[data-key]').forEach(el=>{const k=el.getAttribute('data-key');const v=L[k];if(v&&typeof v==='string')el.textContent=v;});
@@ -6957,8 +7032,10 @@ function setLang(lang){
   const invCust=document.getElementById('inv-cust');if(invCust)invCust.placeholder=L2.invCustPh||'...';
   const rptSearch=document.getElementById('rptSearch');if(rptSearch)rptSearch.placeholder=L2.rptSearchPh||'...';
   const custName=document.getElementById('cust-name');if(custName)custName.placeholder=L2.custNamePh||'...';
-  const cn=document.getElementById('lbl-cf-national');if(cn)cn.textContent=currentLang==='ar'?'الرقم الوطني':'T.C. Kimlik No';
-  const ca=document.getElementById('lbl-cf-area');if(ca)ca.textContent=currentLang==='ar'?'مساحة الأرض (دونم)':'Arazi Alanı (Dönüm)';
+  const cn=document.getElementById('lbl-cf-national');if(cn)cn.textContent=L2.cfNationalLabel|| (lang==='tr'?'T.C. Kimlik No':'الرقم الوطني');
+  const ca=document.getElementById('lbl-cf-area');if(ca)ca.textContent=L2.cfAreaLabel|| (lang==='tr'?'Arazi Alanı (Dönüm)':'مساحة الأرض (دونم)');
+  const cni=document.getElementById('cust-national-id');if(cni)cni.placeholder=L2.custNationalPh||'...';
+  const cai=document.getElementById('cust-area');if(cai)cai.placeholder=L2.custAreaPh||'...';
   const custNotes=document.getElementById('cust-notes');if(custNotes)custNotes.placeholder=L2.custNotesPh||'...';
   const supName=document.getElementById('sup-name');if(supName)supName.placeholder=L2.supNamePh||'...';
   const supContact=document.getElementById('sup-contact');if(supContact)supContact.placeholder=L2.supContactPh||'...';
@@ -7011,6 +7088,7 @@ function applyLangUI(lang){
   if(btnAr)btnAr.classList.toggle('active',lang==='ar');
   if(btnTr)btnTr.classList.toggle('active',lang==='tr');
   const L=TX[lang]||TX.ar;
+  const navApp=document.getElementById('nav-appmanage');if(navApp){const sp=navApp.querySelector('[data-key=appmanage]');if(sp)sp.textContent=L.appmanage|| (lang==='tr'?'Uygulama Yönetimi':'إدارة التطبيق');}
   const lblTitle=document.getElementById('lbl-title');if(lblTitle)lblTitle.textContent=L.sysTitle;
   const lblSub=document.getElementById('lbl-sub');if(lblSub)lblSub.textContent=L.sysSub;
   document.querySelectorAll('[data-key]').forEach(el=>{const k=el.getAttribute('data-key');const v=L[k];if(v&&typeof v==='string')el.textContent=v;});
@@ -7023,6 +7101,10 @@ function applyLangUI(lang){
     const invCust=document.getElementById('inv-cust');if(invCust)invCust.placeholder=L2.invCustPh||'...';
     const rptSearch=document.getElementById('rptSearch');if(rptSearch)rptSearch.placeholder=L2.rptSearchPh||'...';
     const custName=document.getElementById('cust-name');if(custName)custName.placeholder=L2.custNamePh||'...';
+    const cnInit=document.getElementById('lbl-cf-national');if(cnInit)cnInit.textContent=L2.cfNationalLabel||(lang==='tr'?'T.C. Kimlik No':'الرقم الوطني');
+    const caInit=document.getElementById('lbl-cf-area');if(caInit)caInit.textContent=L2.cfAreaLabel||(lang==='tr'?'Arazi Alanı (Dönüm)':'مساحة الأرض (دونم)');
+    const cniInit=document.getElementById('cust-national-id');if(cniInit)cniInit.placeholder=L2.custNationalPh||'...';
+    const caiInit=document.getElementById('cust-area');if(caiInit)caiInit.placeholder=L2.custAreaPh||'...';
     const custNotes=document.getElementById('cust-notes');if(custNotes)custNotes.placeholder=L2.custNotesPh||'...';
     const supName=document.getElementById('sup-name');if(supName)supName.placeholder=L2.supNamePh||'...';
     const supContact=document.getElementById('sup-contact');if(supContact)supContact.placeholder=L2.supContactPh||'...';
@@ -9469,14 +9551,12 @@ function renderInvoiceRows(){
       style="width:65px;padding:5px 8px;border:1.5px solid var(--gy2);border-radius:6px;font-family:inherit;font-size:12px;text-align:center"></td>
     <td style="background:#FFFDE7;vertical-align:top"><input type="number" min="0" step="0.01" value="${h(r.price)}" onchange="invRowChange(${i},'price',+this.value)"
       style="width:90px;padding:5px 8px;border:1.5px solid #FFC107;border-radius:6px;font-family:inherit;font-size:12px;text-align:center;color:#0000FF"></td>
-    <td style="vertical-align:top"><input type="number" min="0" max="100" value="${h(r.disc)}" onchange="invRowChange(${i},'disc',+this.value)"
-      style="width:60px;padding:5px 8px;border:1.5px solid var(--gy2);border-radius:6px;font-family:inherit;font-size:12px;text-align:center"></td>
     <td style="font-weight:700;color:var(--g8);text-align:center;vertical-align:top">${numFmt(r.qty*r.price*(1-r.disc/100))}</td>
     <td style="vertical-align:top"><button class="btn bd bsm" onclick="removeInvRow(${i})">✕</button></td>
   </tr>
   <!-- صف مرجع الاستخدام المنسدل -->
   <tr id="inv-uref-tr-${i}" style="display:none">
-    <td colspan="9" style="padding:0 0 6px 0">
+    <td colspan="8" style="padding:0 0 6px 0">
       <div class="inv-uref-row ${hasRef?'open':''}" id="inv-uref-panel-${i}">
         <div class="inv-uref-field">
           <label>${isAr?'نوع الاستخدام':'Kullanım Türü'}</label>
@@ -9697,6 +9777,42 @@ function _findDbItem(name,pkg,dep){
   return db.find(x=>x.name.toUpperCase()===name.toUpperCase()&&x.dep===dep);
 }
 
+// ── ربط تلقائي بين الفاتورة والجرعات ووقت العلاج ─────────────────────
+function _getCustomerAreaDunum(customerName){
+  var c=(customers||[]).find(function(x){return norm(x.name)===norm(customerName);});
+  var a=c?Number(c.area||c.landArea||c.dunum||c.donum||0):0;
+  return Number.isFinite(a)&&a>0?a:0;
+}
+function _getDrugTypeForItem(itemId){
+  var t=(drugTypesDB||[]).find(function(x){return Number(x.itemId)===Number(itemId);});
+  return t?{type:t.type||'',compound:t.compound||'',hzType:t.hzType||''}:null;
+}
+function _saveInvoiceDoseReference(item,row,invoiceNo,invoiceDate,customerName){
+  if(!item||!row||!row.urefType||!(Number(row.urefVal)>0)) return;
+  var entry=dosesDB.find(function(d){return Number(d.medId)===Number(item.id);});
+  var ref={type:row.urefType,val:Number(row.urefVal),unit:row.urefUnit||'',note:row.urefNote||'',qty:Number(row.qty)||0,
+    invSource:invoiceNo||'',savedAt:invoiceDate||todayStr(),customer:customerName||'',customerAreaDunum:_getCustomerAreaDunum(customerName)};
+  if(!entry){entry={medId:item.id,type:row.urefType==='water'?'water':'area',medAmount:0,medUnit:'ml',waterRef:1,areaRef:1,notes:row.urefNote||'',urefs:[]};dosesDB.push(entry);}
+  if(!Array.isArray(entry.urefs))entry.urefs=[];
+  var ix=entry.urefs.findIndex(function(u){return u.type===ref.type&&u.invSource===ref.invSource;});
+  if(ix>=0)entry.urefs[ix]=ref;else entry.urefs.push(ref);
+  saveDosesDB();
+}
+function _invoiceTreatmentMeta(item,row,customerName,invoiceDate){
+  var area=_getCustomerAreaDunum(customerName);
+  var cat=_getDrugTypeForItem(item&&item.id);
+  var dose=(item&&Array.isArray(dosesDB))?dosesDB.find(function(d){return Number(d.medId)===Number(item.id);}):null;
+  return {
+    invoiceAuto:true,
+    customerAreaDunum:area,
+    doseType: dose?dose.type:'',
+    doseReference: dose?{type:dose.type,medAmount:Number(dose.medAmount)||0,medUnit:dose.medUnit||'',waterRef:Number(dose.waterRef)||0,areaRef:Number(dose.areaRef)||0}:null,
+    drugType:cat?cat.type:'',activeCompound:cat?cat.compound:'',hazardClass:cat?cat.hzType:'',
+    sprayArea:row.sprayArea|| (area?String(area):''),
+    sprayDate:row.sprayDate||invoiceDate||todayStr()
+  };
+}
+
 // ── قفل عالمي لمنع الضغط المزدوج على تأكيد البيع ──
 var _isSavingInvoice = false;
 
@@ -9765,10 +9881,14 @@ function _confirmInvoiceCore(){
     item.qty-=r.qty;
     movements.push({date,name:r.name,type:T('outType'),qty:r.qty,loc:'Sale→'+customer,by:customer,notes:invNo});
     addAudit(ACT.SALE,r.name,r.pkg,item.dep,before,item.qty,r.price,r.price,customer,`${invNo}|${region||'—'}|${r.disc}%`);
+    var _tMeta=_invoiceTreatmentMeta(item,r,customer,date);
     salesLog.push({date,invNo,customer,region,name:r.name,pkg:r.pkg,qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
       urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',
       sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',sprayCrop:r.sprayCrop||'',
-      sprayArea:r.sprayArea||'',sprayDate:r.sprayDate||date,sprayInterval:r.sprayInterval||''});
+      sprayArea:_tMeta.sprayArea,sprayDate:_tMeta.sprayDate,sprayInterval:r.sprayInterval||'',
+      invoiceAuto:true,customerAreaDunum:_tMeta.customerAreaDunum,doseType:_tMeta.doseType,doseReference:_tMeta.doseReference,
+      drugType:_tMeta.drugType,activeCompound:_tMeta.activeCompound,hazardClass:_tMeta.hazardClass});
+    _saveInvoiceDoseReference(item,r,invNo,date,customer);
     
     // ✅ عند وصول الكمية إلى 0 → تعليم "نفد" بدلاً من الحذف
     if(item.qty === 0){
@@ -9819,7 +9939,6 @@ function printInvoice(){
       <td>${r.pkg}</td>
       <td>${r.qty}</td>
       <td>${numFmt(r.price)} ₺</td>
-      <td>${r.disc?r.disc+'%':'—'}</td>
       <td><strong>${numFmt(r.qty*r.price*(1-r.disc/100))} ₺</strong></td>
     </tr>`).join('');
 
@@ -9876,7 +9995,6 @@ ${notes&&false?`<div class="notes">📝 ${notes}</div>`:''}
     <th>${isAr?'العبوة':'Ambalaj'}</th>
     <th>${isAr?'الكمية':'Miktar'}</th>
     <th>${isAr?'السعر':'Fiyat'}</th>
-    <th>${isAr?'خصم':'İndirim'}</th>
     <th>${isAr?'الإجمالي':'Toplam'}</th>
   </tr></thead>
   <tbody>${rowsHtml}</tbody>
@@ -11632,7 +11750,7 @@ function _doImportStockFromXlsx(){
 function exportSalesExcel(){const rF=document.getElementById('sales-reg')?.value||'';const cF=trNorm(document.getElementById('sales-cust')?.value||'').trim();const list=salesLog.filter(s=>salesFilter(s)&&(!rF||s.region===rF)&&(!cF||trNorm(s.customer).includes(cF)));const h=currentLang==='ar'?['التاريخ','الفاتورة','العميل','المنطقة','الدواء','الكمية','السعر','خصم%','الإجمالي']:['Tarih','Fatura','Müşteri','Bölge','İlaç','Miktar','Fiyat','İndirim%','Toplam ₺'];const rows=list.map(r=>[fmtDate(r.date),r.invNo,r.customer,r.region||'—',r.name,r.qty,r.price,r.disc,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','','','','','',list.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0)]);const _isAr=currentLang==='ar';dlXlsx(makeWb(h,rows,_isAr?'المبيعات':'Satışlar'),`${_isAr?'مبيعات':'satislar'}_${salesPeriod}_${todayStr()}.xlsx`);showToast('📥');}
 function exportMovementsExcel(){const h=T('tblMov');const rows=movements.map(m=>[fmtDate(m.date),m.name,movTypeLabel(m.type),m.qty,m.loc,m.by,m.notes||'']);const _isArM=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArM?'الحركات':'Hareketler'),`${_isArM?'حركات':'hareketler'}_${todayStr()}.xlsx`);showToast('📥');}
 function exportReturnsExcel(){const h=currentLang==='ar'?['التاريخ','الزبون','الدواء','العبوة','المستودع','الكمية','الفاتورة','السبب']:['Tarih','Müşteri','İlaç','Ambalaj','Depo','Miktar','Fatura','Sebep'];const rows=returnsLog.map(r=>[fmtDate(r.date),r.customer,r.name,r.pkg,depN(r.dep),r.qty,r.invRef||'',r.reason]);const _isArR=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArR?'المرتجعات':'İadeler'),`${_isArR?'مرتجعات':'iadeler'}_${todayStr()}.xlsx`);showToast('📥');}
-function exportInvoiceExcel(){const isAr=currentLang==='ar';const customer=document.getElementById('inv-cust').value||'';const invNo=document.getElementById('inv-no').value;const date=document.getElementById('inv-date').value||todayStr();const region=document.getElementById('inv-region').value;const vr=invoiceRows.filter(r=>r.name&&r.qty>0);const sub=vr.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);const h=T('tblInv').slice(0,7);const rows=vr.map((r,i)=>[i+1,r.name,r.pkg,r.qty,r.price,r.disc,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','','',T('subTotal'),sub]);rows.push(['','','','','',T('grandTotal'),sub]);const ws=XLSX.utils.aoa_to_sheet([[`${T('invoiceNoLabel')}: ${invNo}`],[`${T('customerLabel')}: ${customer}`],[`${T('date')}: ${fmtDate(date)}`],[`${T('regionLabel')}: ${region||'—'}`],[''],h,...rows]);const wb2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb2,ws,isAr?'فاتورة':'Fatura');dlXlsx(wb2,`${isAr?'فاتورة':'fatura'}_${invNo}.xlsx`);showToast('📥');}
+function exportInvoiceExcel(){const isAr=currentLang==='ar';const customer=document.getElementById('inv-cust').value||'';const invNo=document.getElementById('inv-no').value;const date=document.getElementById('inv-date').value||todayStr();const region=document.getElementById('inv-region').value;const vr=invoiceRows.filter(r=>r.name&&r.qty>0);const sub=vr.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);const h=T('tblInv').slice(0,6);const rows=vr.map((r,i)=>[i+1,r.name,r.pkg,r.qty,r.price,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','',T('subTotal'),sub]);rows.push(['','','','',T('grandTotal'),sub]);const ws=XLSX.utils.aoa_to_sheet([[`${T('invoiceNoLabel')}: ${invNo}`],[`${T('customerLabel')}: ${customer}`],[`${T('date')}: ${fmtDate(date)}`],[`${T('regionLabel')}: ${region||'—'}`],[''],h,...rows]);const wb2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb2,ws,isAr?'فاتورة':'Fatura');dlXlsx(wb2,`${isAr?'فاتورة':'fatura'}_${invNo}.xlsx`);showToast('📥');}
 function exportAuditExcel(){const h=T('tblAudit');const rows=auditLog.map(e=>[e.id,e.date,e.time,actionLabel(e.action),e.itemName,e.pkg,depN(e.dep),e.qtyBefore,e.qtyAfter,e.qtyDelta,e.priceBefore,e.priceAfter,e.priceDelta,e.by,e.notes]);const isAr=currentLang==='ar';dlXlsx(makeWb(h,rows,isAr?'سجل التعديلات':'Düzenleme Kayıtları'),`${isAr?'سجل_التعديلات':'duzenleme_kayitlari'}_${todayStr()}.xlsx`);showToast('📥 '+T('audit'));}
 
 // ── TOAST ─────────────────────────────────────
@@ -13330,7 +13448,7 @@ function getObservedDosePerDunum(med){
     const samePkg=!r.pkg||!med.pkg||norm(r.pkg)===norm(med.pkg);
     if(!sameName||!samePkg) return;
     const cust=(customers||[]).find(c=>norm(c.name)===norm(r.customer));
-    const area=Number(cust?.area||cust?.landArea||0), qty=Number(r.qty||0);
+    const area=Number(r.customerAreaDunum||cust?.area||cust?.landArea||cust?.dunum||0), qty=Number(r.qty||0);
     if(area>0&&qty>0) samples.push({rate:qty/area,area,qty});
   });
   if(!samples.length) return null;
@@ -14739,24 +14857,17 @@ function saveEditedInvoice() {
     addAudit(ACT.SALE, item.name, item.pkg, item.dep, before, item.qty,
              r.price, r.price, newCustomer,
              invNo + '|' + (newRegion || '—') + '|' + r.disc + '% [edited]');
+    var _tMetaEdit=_invoiceTreatmentMeta(item,r,newCustomer,newDate);
     salesLog.push({
-      date: newDate,
-      invNo: invNo,
-      customer: newCustomer,
-      region: newRegion,
-      name: item.name,
-      pkg: item.pkg,
-      qty: r.qty,
-      price: r.price,
-      disc: r.disc,
-      dep: item.dep,
-      // حفظ حقول الرش والمرجع من الصف الأصلي
-      urefType: r.urefType||'', urefVal: r.urefVal||'',
-      urefUnit: r.urefUnit||'', urefNote: r.urefNote||'',
-      sprayReason: r.sprayReason||'', sprayUsageType: r.sprayUsageType||'',
-      sprayCrop: r.sprayCrop||'', sprayArea: r.sprayArea||'',
-      sprayDate: r.sprayDate||newDate, sprayInterval: r.sprayInterval||''
+      date:newDate,invNo:invNo,customer:newCustomer,region:newRegion,name:item.name,pkg:item.pkg,
+      qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
+      urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',
+      sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',sprayCrop:r.sprayCrop||'',
+      sprayArea:_tMetaEdit.sprayArea,sprayDate:_tMetaEdit.sprayDate,sprayInterval:r.sprayInterval||'',
+      invoiceAuto:true,customerAreaDunum:_tMetaEdit.customerAreaDunum,doseType:_tMetaEdit.doseType,doseReference:_tMetaEdit.doseReference,
+      drugType:_tMetaEdit.drugType,activeCompound:_tMetaEdit.activeCompound,hazardClass:_tMetaEdit.hazardClass
     });
+    _saveInvoiceDoseReference(item,r,invNo,newDate,newCustomer);
   });
 
   if (saveErrors.length) {
@@ -14904,7 +15015,24 @@ function renderSprayReminderPage() {
   // جمع كل سجلات الرش من salesLog
   _sprayAllRecords = [];
   salesLog.forEach(function(s) {
-    if(!s.sprayCrop && !s.sprayReason) return; // تخطي السجلات بدون محصول أو سبب رش
+    // ترحيل تلقائي آمن للفواتير القديمة: ربطها بمساحة العميل وتصنيف المنتج ومرجع الجرعة إن وجد.
+    if(!s.invoiceAuto){
+      var legacyItem=db.find(function(x){return norm(x.name)===norm(s.name)&&norm(x.pkg)===norm(s.pkg);});
+      var legacyType=legacyItem?_getDrugTypeForItem(legacyItem.id):null;
+      var legacyDose=legacyItem?(dosesDB||[]).find(function(d){return Number(d.medId)===Number(legacyItem.id);}):null;
+      var legacyArea=_getCustomerAreaDunum(s.customer);
+      if(legacyType||legacyDose||s.sprayCrop||s.sprayReason){
+        s.invoiceAuto=true;s.customerAreaDunum=Number(s.customerAreaDunum)||legacyArea;
+        s.drugType=s.drugType||(legacyType?legacyType.type:'');
+        s.activeCompound=s.activeCompound||(legacyType?legacyType.compound:'');
+        s.hazardClass=s.hazardClass||(legacyType?legacyType.hzType:'');
+        s.doseType=s.doseType||(legacyDose?legacyDose.type:'');
+        s.doseReference=s.doseReference||(legacyDose?{type:legacyDose.type,medAmount:Number(legacyDose.medAmount)||0,medUnit:legacyDose.medUnit||'',waterRef:Number(legacyDose.waterRef)||0,areaRef:Number(legacyDose.areaRef)||0}:null);
+        if(!s.sprayArea&&s.customerAreaDunum)s.sprayArea=String(s.customerAreaDunum);
+        if(!s.sprayDate)s.sprayDate=s.date;
+      }
+    }
+    if(!s.sprayCrop && !s.sprayReason && !(s.invoiceAuto && (s.drugType || s.doseReference || s.urefType))) return; // الفواتير المصنفة أو المرتبطة بمرجع جرعة فقط
     var sprayDate = s.sprayDate || s.date;
     var nextDate = null;
     var daysUntil = null;
@@ -14930,10 +15058,11 @@ function renderSprayReminderPage() {
       daysUntil: daysUntil,
       status: status,
       sprayCrop: s.sprayCrop || '—',
-      sprayReason: s.sprayReason || '—',
-      sprayUsageType: s.sprayUsageType || '—',
-      sprayArea: s.sprayArea || '—',
+      sprayReason: s.sprayReason || s.drugType || '—',
+      sprayUsageType: s.sprayUsageType || (s.invoiceAuto ? (currentLang==='ar'?'مرتبط بفاتورة':'Faturaya bağlı') : '—'),
+      sprayArea: s.sprayArea || (s.customerAreaDunum ? String(s.customerAreaDunum) : '—'),
       sprayInterval: s.sprayInterval || '',
+      customerAreaDunum: Number(s.customerAreaDunum)||0, drugType:s.drugType||'', activeCompound:s.activeCompound||'', doseReference:s.doseReference||null,
     });
   });
 

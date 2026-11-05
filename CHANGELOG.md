@@ -1,3 +1,31 @@
+## 🏷️ BEYDUN AGRO V20.6 — 5 November 2026
+### ربط الفواتير بوقت العلاج وحاسبة الجرعات وأنواع الأدوية + تحسين الجوال
+- ربط كل بند فاتورة بتاريخ الفاتورة والعميل ومساحة أرضه المسجلة؛ تُستخدم المساحة تلقائياً كمساحة مرجعية في سجل وقت العلاج عند عدم إدخال مساحة مخصصة للبند.
+- ربط بنود الفواتير بتصنيف الدواء والمادة الفعالة وفئة الخطورة الموجودة في قاعدة أنواع الأدوية، وبمرجع الجرعة المسجل للدواء إن وجد.
+- حفظ مراجع الاستخدام المدخلة في الفاتورة تلقائياً داخل سجل جرعات الدواء مع رقم الفاتورة وتاريخها والعميل ومساحته، دون استبدال الجرعة المرجعية الأصلية.
+- إظهار الفواتير المصنفة أو المرتبطة بمرجع جرعة في صفحة وقت العلاج تلقائياً. تاريخ الفاتورة هو تاريخ الاستخدام الافتراضي؛ لا يتم اختراع فترة إعادة أو جرعة غير مدخلة.
+- ربط الحسابات التاريخية بكمية المبيع ومساحة العميل المسجلة وقت الفاتورة، وعرضها كمؤشر استهلاك تاريخي لكل دونم، وليس كتوصية جرعة زراعية.
+- ترحيل سجلات الفواتير القديمة عند فتح صفحة وقت العلاج بقدر ما تسمح به بيانات العميل وتصنيف الدواء ومرجع الجرعة المتاح.
+- تحسين عرض حاسبة الجرعات وأنواع الأدوية ووقت العلاج على الهاتف: تكديس الأعمدة، تكبير الحقول، وتحسين التمرير الأفقي للجداول.
+- فحص JavaScript syntax، وفحص ملف ZIP، واختبار وحدات ربط مساحة العميل/تاريخ الفاتورة/تصنيف الدواء/مرجع الجرعة وحفظ مرجع الفاتورة بنجاح. لم يُنفذ اختبار شامل لكل تفاعلات التطبيق أو اختبار مرئي على جهاز المستخدم.
+
+## 🏷️ BEYDUN AGRO V20.5 — 5 November 2026
+### Turkish translation fixes and customer invoice simplification
+- Translated the app-management navigation item and both app-management section headings through the shared Arabic/Turkish language catalog.
+- Completed Turkish labels and placeholders in the customer form, including national ID, land area, and notes fields; applied the same translations during normal language switching and initial app loading.
+- Removed the discount / İndirim column and input from the new customer invoice entry table. New invoices continue to calculate normally with no discount field; existing historical sales and their saved discount values are preserved.
+- Removed the discount column from the customer-invoice Excel export while retaining discount information in sales-history reports where it is part of historical records.
+- Preserved the existing embedded application data and all inventory, warehouse, customer, sales, return, and audit records.
+- JavaScript syntax validation passed. Visual testing on the user's phone remains necessary.
+
+## V20.4 — 5 November 2026
+### Customer invoice and returns page layout
+- Removed the discount/İndirim column from the printable customer invoice table. Discount calculations remain intact in invoice totals; this is a display-only removal.
+- Reworked the returns page into a responsive layout: two panels on wider screens and vertically stacked panels on phones.
+- Made return form fields full-width and vertically arranged on mobile to prevent overlap.
+- Kept the returns log in a horizontally scrollable table container on narrow screens so columns do not collide.
+- JavaScript syntax validation is required; visual behavior should be checked on the user's device.
+
 ## V19.5 — 4 November 2026
 ### Automatic pricing for historical invoices
 - On startup, after the saved database and warehouse data are loaded, the app checks historical sales rows for a missing or zero price.
@@ -159,3 +187,9 @@ Applied only the seven explicitly requested package/unit changes:
 - إعادة تطبيق قاموس الترجمة العربية/التركية بعد إعادة رسم الصفحة لتقليل بقاء النصوص الثابتة بلغة سابقة.
 - توسيع قاموس النصوص الثابتة لإعدادات العرض وحجم الخط.
 - لم تتم ترجمة أسماء المنتجات أو العملاء أو بيانات المستخدم المدخلة.
+
+## V20.3 — مراجعة استكمال الترجمة العربية والتركية
+- إضافة ترجمات ثنائية الاتجاه لعناوين وإعدادات إدارة التطبيق وخيارات وضع العرض وحجم الخط وترتيب الأزرار.
+- استكمال ترجمة عناوين وحقول البحث في صفحة أنواع الأدوية والتراكيب، بما فيها خيارات القوائم المنسدلة.
+- إضافة ترجمات للحقول والعبارات الثابتة التي ظهرت بالعربية أثناء اختيار التركية والعكس.
+- لم تتم ترجمة أسماء العملاء أو الأدوية أو البيانات التي يدخلها المستخدم.
