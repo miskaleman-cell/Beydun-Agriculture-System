@@ -1,4 +1,4 @@
-BEYDUN AGRO — V20.6
+BEYDUN AGRO — V20.9
 
 # Beydun Agriculture System — تطبيق PWA
 
@@ -89,3 +89,10 @@ const CACHE_NAME = 'beydun-agro-v2';   // كان v1
 
 ### V20.3
 مراجعة إضافية للترجمة العربية والتركية، مع استكمال نصوص إدارة التطبيق، خيارات العرض وحجم الخط، وصفحة أنواع الأدوية والتراكيب والحقول المنسدلة.
+
+
+### V20.7 — Crop & Season tracking
+Invoice records now carry a crop and agricultural season. Season options are editable and suggested from the invoice date; historical dose-per-area sales indicators can be filtered by season and crop. Crop list includes garlic, olive, pistachio, eggplant, pepper, cotton and additional crops. Sales-derived metrics are explicitly historical sales indicators, not approved label doses.
+
+## ملاحظات V20.8
+تم حذف تصنيف المحاصيل من واجهة الفواتير وحاسبة الجرعات ووقت العلاج. اكتب نوع المحصول (مثل الثوم أو الفستق) في حقل ملاحظات الفاتورة. بقيت المواسم الزراعية وفلاترها كما هي. لا تُحذف حقول المحاصيل القديمة من بيانات النسخ الاحتياطية.

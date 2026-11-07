@@ -74,7 +74,7 @@
  #mo-edit-inv .ei-main-grid input{font-size:16px!important}
 }
 
-/* V20.6: integrated dose/treatment workflow + phone layout */
+/* V20.8: crop fields removed; invoice notes retained; seasons preserved */
 @media(max-width:700px){
   #page-dose .dose-hero{padding:14px!important}
   #page-dose #dtab-content-calc > div{grid-template-columns:1fr!important;gap:12px!important}
@@ -1984,7 +1984,8 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
           <datalist id="cust-list"></datalist>
         </div>
         <div class="inv-field"><label data-key="invNo">رقم الفاتورة</label><input id="inv-no" placeholder="FAT-001"></div>
-        <div class="inv-field"><label data-key="date">التاريخ</label><input type="date" id="inv-date"></div>
+        <div class="inv-field"><label data-key="date">التاريخ</label><input type="date" id="inv-date" onchange="_syncInvoiceSeasonFromDate()"></div>
+        <div class="inv-field"><label>🌾 الموسم الزراعي</label><select id="inv-season" onchange="_seasonManualInvoice=true"></select></div>
         <div class="inv-field"><label data-key="region">المنطقة</label>
           <select id="inv-region">
             <option value="" id="inv-region-placeholder">-- اختر المنطقة --</option>
@@ -2081,16 +2082,13 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
   </div>
   <div class="panel" style="margin-bottom:12px">
     <div style="display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap;align-items:center;background:var(--gy1);border-bottom:1px solid var(--gy2)">
-      <div class="sb"><span>🔍</span><input id="spray-search" placeholder="" oninput="filterSprayReminders()" style="border:none;outline:none;background:transparent;font-family:inherit;font-size:12px;flex:1;min-width:160px"></div>
+      <div class="sb"><span>🔍</span><div class="inv-field" style="max-width:220px;margin:8px 0"><label>📅 الموسم الزراعي</label><select id="spray-season-filter" onchange="renderSprayReminderPage()"><option value="">كل المواسم</option></select></div><input id="spray-search" placeholder="" oninput="filterSprayReminders()" style="border:none;outline:none;background:transparent;font-family:inherit;font-size:12px;flex:1;min-width:160px"></div>
       <select id="spray-filter-status" onchange="filterSprayReminders()" style="padding:6px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px">
         <option value="" id="spray-opt-allstatus"></option>
         <option value="overdue" id="spray-opt-overdue"></option>
         <option value="soon" id="spray-opt-soon"></option>
         <option value="ok" id="spray-opt-ok"></option>
         <option value="no-interval" id="spray-opt-noint"></option>
-      </select>
-      <select id="spray-filter-crop" onchange="filterSprayReminders()" style="padding:6px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px">
-        <option value="" id="spray-opt-allcrops"></option>
       </select>
       <select id="spray-filter-type" onchange="filterSprayReminders()" style="padding:6px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px">
         <option value="" id="spray-opt-alltypes"></option>
@@ -2107,7 +2105,6 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
           <tr id="spray-thead-row" style="background:linear-gradient(to left,#1a4731,#2E7D32)">
             <th style="color:#fff">#</th>
             <th style="color:#fff" id="spray-th-drug"></th>
-            <th style="color:#fff" id="spray-th-crop"></th>
             <th style="color:#fff" id="spray-th-customer"></th>
             <th style="color:#fff" id="spray-th-reason"></th>
             <th style="color:#fff" id="spray-th-usagetype"></th>
@@ -2685,6 +2682,9 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
             <button class="btn bsm" style="background:rgba(255,255,255,.2);color:#fff;font-size:10px" onclick="clearDoseCalc()">مسح</button>
           </div>
           <div style="padding:10px">
+            <div class="dose-fields-row cols2" style="margin-bottom:10px">
+              <div class="dose-fgr"><label>📅 الموسم</label><select id="dose-season-filter" onchange="renderDoseMedList()"></select></div>
+            </div>
             <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
               <div class="dose-search-box" style="flex:1">
                 <span>🔍</span>
@@ -3689,6 +3689,8 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
         <div class="fg"><label>اسم العميل</label><input id="ei-customer" class="ti" type="text" placeholder="العميل"></div>
         <div class="fg"><label>المنطقة</label><input id="ei-region" class="ti" type="text" placeholder="المنطقة"></div>
         <div class="fg"><label>التاريخ</label><input id="ei-date" class="ti" type="date"></div>
+        <div class="fg"><label>الموسم الزراعي</label><select id="ei-season" class="ti"></select></div>
+        <div class="fg"><label>ملاحظات الفاتورة / المحصول</label><input id="ei-notes" class="ti" type="text" placeholder="مثال: هذه الفاتورة لمحصول الثوم"></div>
         <div class="fg"><label>رقم الفاتورة</label><input id="ei-invno" class="ti" type="text" readonly style="opacity:.6"></div>
       </div>
       <div style="font-weight:600;margin-bottom:8px;font-size:13px">📦 الأصناف</div>
@@ -4449,7 +4451,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.6';
+var APP_VERSION = '20.9';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -5564,12 +5566,7 @@ function exportBackup() {
       showToast('❌ فشل التصدير: ' + (e2 && e2.message ? e2.message : 'خطأ غير معروف'), 'err');
       return;
     }
-  } else {
-    // تشغيل fallback متأخر احتياطي في حال لم يبدأ التنزيل
-    setTimeout(function(){
-      try { _tryDataUri(); } catch(e3) {}
-    }, 400);
-  }
+  } // لا نطلق fallback بعد نجاح Blob كي لا ينزل ملفان للمستخدم.
 
   // حفظ وقت آخر تصدير
   const exportTimeStr = `${pad(now.getHours())}:${pad(now.getMinutes())} — ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
@@ -9454,8 +9451,7 @@ function invRowChange(i,field,val){
     if(sepIdx>-1){
       const namePart=val.slice(0,sepIdx).trim();
       const pkgPart=val.slice(sepIdx+3).trim();
-      const m=db.find(x=>x.name.toUpperCase()===namePart.toUpperCase()&&x.pkg.toUpperCase()===pkgPart.toUpperCase()&&x.dep===dep)
-             ||db.find(x=>x.name.toUpperCase()===namePart.toUpperCase()&&x.pkg.toUpperCase()===pkgPart.toUpperCase());
+      const m=_findDbItem(namePart,pkgPart,dep);
       if(m){
         invoiceRows[i].name=m.name;
         invoiceRows[i].pkg=m.pkg;
@@ -9466,11 +9462,7 @@ function invRowChange(i,field,val){
     // ثانياً: بحث بالاسم فقط في نفس المستودع (تطابق تام)
     const m=db.find(x=>x.name.toUpperCase()===val.toUpperCase()&&x.dep===dep);
     if(m){invoiceRows[i].pkg=m.pkg;invoiceRows[i].price=m.price;}
-    else{
-      // بحث بدون تحديد مستودع كخيار احتياطي
-      const mAny=db.find(x=>x.name.toUpperCase()===val.toUpperCase());
-      if(mAny){invoiceRows[i].pkg=mAny.pkg;invoiceRows[i].price=mAny.price;}
-    }
+    // لا نختار صنفاً من مستودع آخر عند عدم وجود تطابق في المستودع المحدد.
   }
   renderInvoiceRows();
 }
@@ -9596,13 +9588,6 @@ function renderInvoiceRows(){
           <span style="font-size:10px;color:#546854;margin-right:auto">${isAr?'اختياري — يُستخدم في صفحة التذكيرات':'İsteğe bağlı'}</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <label style="font-size:10px;font-weight:700;color:#1a4731;display:block;margin-bottom:3px">🌱 ${isAr?'المحصول / الشجرة':'Mahsul/Ağaç'}</label>
-            <input type="text" list="spray-crop-list-${i}" placeholder="${isAr?'طماطم، زيتون...':'domates, zeytin...'}"
-              value="${h(r.sprayCrop||'')}" onchange="sprayChange(${i},'sprayCrop',this.value)"
-              style="width:100%;padding:5px 8px;border:1.5px solid #a5d6a7;border-radius:6px;font-family:inherit;font-size:12px;background:#fff">
-            <datalist id="spray-crop-list-${i}">${['طماطم','خيار','فليفلة','باذنجان','بطيخ','شمام','زيتون','تفاح','عنب','رمان','حمضيات','قمح','شعير','ذرة','بصل','ثوم','بطاطا','فراولة','موز','برتقال'].map(c=>'<option value="'+c+'">').join('')}</datalist>
-          </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:#1a4731;display:block;margin-bottom:3px">🎯 ${isAr?'سبب الرش':'Püskürtme Nedeni'}</label>
             <input type="text" list="spray-reason-list-${i}" placeholder="${isAr?'مكافحة العث، وقاية...':'Akar, koruma...'}"
@@ -9767,14 +9752,14 @@ function _resolveInvRow(r){
 }
 // ── ابحث عن العنصر في قاعدة البيانات بالاسم+العبوة+المستودع
 function _findDbItem(name,pkg,dep){
-  // تطابق تام بالاسم+العبوة+مستودع
-  let m=db.find(x=>x.name.toUpperCase()===name.toUpperCase()&&x.pkg.toUpperCase()===pkg.toUpperCase()&&x.dep===dep);
-  if(m) return m;
-  // تطابق بالاسم+العبوة بأي مستودع
-  m=db.find(x=>x.name.toUpperCase()===name.toUpperCase()&&x.pkg.toUpperCase()===pkg.toUpperCase());
-  if(m) return m;
-  // احتياطي: اسم فقط في نفس المستودع
-  return db.find(x=>x.name.toUpperCase()===name.toUpperCase()&&x.dep===dep);
+  // لا نسمح أبداً بالانتقال الصامت إلى مستودع آخر؛ هوية الصنف تشمل المستودع.
+  var n=String(name||'').trim().toLocaleUpperCase();
+  var k=String(pkg||'').trim().toLocaleUpperCase();
+  if(!n || dep===undefined || dep===null || dep==='') return null;
+  return db.find(function(x){
+    return String(x.name||'').trim().toLocaleUpperCase()===n &&
+      String(x.pkg||'').trim().toLocaleUpperCase()===k && String(x.dep)===String(dep);
+  }) || null;
 }
 
 // ── ربط تلقائي بين الفاتورة والجرعات ووقت العلاج ─────────────────────
@@ -9812,6 +9797,33 @@ function _invoiceTreatmentMeta(item,row,customerName,invoiceDate){
     sprayDate:row.sprayDate||invoiceDate||todayStr()
   };
 }
+
+// ── المحاصيل والمواسم الزراعية ───────────────────────────────
+var _seasonManualInvoice = false;
+function _agroSeasonForDate(dateStr){
+  var d=new Date((dateStr||todayStr())+'T12:00:00'); if(isNaN(d.getTime())) return '';
+  var y=d.getFullYear(),m=d.getMonth()+1;
+  if(m>=9) return y+'-'+(y+1);
+  if(m<=6) return (y-1)+'-'+y;
+  return '';
+}
+function _agroSeasonOptions(selected){
+  var now=new Date(), y=now.getFullYear(), opts=[];
+  for(var a=y-3;a<=y+3;a++) opts.push(a+'-'+(a+1));
+  if(selected && opts.indexOf(selected)<0) opts.push(selected);
+  return opts.sort().map(function(v){return '<option value="'+v+'" '+(v===selected?'selected':'')+'>'+v+'</option>';}).join('');
+}
+function _syncInvoiceSeasonFromDate(){
+  if(_seasonManualInvoice)return;
+  var date=document.getElementById('inv-date')?.value||todayStr(), season=_agroSeasonForDate(date), sel=document.getElementById('inv-season');
+  if(sel&&season){sel.innerHTML=_agroSeasonOptions(season);sel.value=season;}
+}
+function _initAgroSeasonControls(){
+  var date=document.getElementById('inv-date')?.value||todayStr(), season=_agroSeasonForDate(date);
+  var inv=document.getElementById('inv-season'); if(inv){inv.innerHTML=_agroSeasonOptions(season);inv.value=season||inv.value;}
+  var ds=document.getElementById('dose-season-filter'); if(ds){var cur=ds.value||season;ds.innerHTML='<option value="">كل المواسم</option>'+_agroSeasonOptions(cur);ds.value=cur||'';}
+}
+function _seasonForSale(r){return r.season||_agroSeasonForDate(r.date)||'غير محدد';}
 
 // ── قفل عالمي لمنع الضغط المزدوج على تأكيد البيع ──
 var _isSavingInvoice = false;
@@ -9882,12 +9894,14 @@ function _confirmInvoiceCore(){
     movements.push({date,name:r.name,type:T('outType'),qty:r.qty,loc:'Sale→'+customer,by:customer,notes:invNo});
     addAudit(ACT.SALE,r.name,r.pkg,item.dep,before,item.qty,r.price,r.price,customer,`${invNo}|${region||'—'}|${r.disc}%`);
     var _tMeta=_invoiceTreatmentMeta(item,r,customer,date);
-    salesLog.push({date,invNo,customer,region,name:r.name,pkg:r.pkg,qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
+    var _invoiceNotes=document.getElementById('inv-notes')?.value||'';
+    salesLog.push({date,invNo,customer,region,invoiceNotes:_invoiceNotes,name:r.name,pkg:r.pkg,qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
       urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',
-      sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',sprayCrop:r.sprayCrop||'',
+      sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',
       sprayArea:_tMeta.sprayArea,sprayDate:_tMeta.sprayDate,sprayInterval:r.sprayInterval||'',
       invoiceAuto:true,customerAreaDunum:_tMeta.customerAreaDunum,doseType:_tMeta.doseType,doseReference:_tMeta.doseReference,
-      drugType:_tMeta.drugType,activeCompound:_tMeta.activeCompound,hazardClass:_tMeta.hazardClass});
+      drugType:_tMeta.drugType,activeCompound:_tMeta.activeCompound,hazardClass:_tMeta.hazardClass,
+      season:document.getElementById('inv-season')?.value||_agroSeasonForDate(date)||'غير محدد'});
     _saveInvoiceDoseReference(item,r,invNo,date,customer);
     
     // ✅ عند وصول الكمية إلى 0 → تعليم "نفد" بدلاً من الحذف
@@ -9911,12 +9925,14 @@ function _confirmInvoiceCore(){
   invCounter=Math.max(invCounter+1,_maxFromLog+1);
   saveAll();showToast(`✅ ${invNo} — ${customer}`);clearInvoice();
 }
-function _emptyInvRow(){return{name:'',pkg:'',qty:0,price:0,disc:0,dep:1,urefType:'',urefVal:'',urefUnit:'',urefNote:'',urefAdopted:false,sprayReason:'',sprayUsageType:'',sprayCrop:'',sprayArea:'',sprayDate:'',sprayInterval:''};}
+function _emptyInvRow(){return{name:'',pkg:'',qty:0,price:0,disc:0,dep:1,urefType:'',urefVal:'',urefUnit:'',urefNote:'',urefAdopted:false,sprayReason:'',sprayUsageType:'',sprayArea:'',sprayDate:'',sprayInterval:''};}
 function clearInvoice(){
+  _seasonManualInvoice=false;
   invoiceRows=[];for(let i=0;i<5;i++)invoiceRows.push(_emptyInvRow());
   ['inv-cust','inv-region','inv-notes'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
   document.getElementById('inv-no').value='FAT-'+String(invCounter).padStart(3,'0');
   renderInvoiceRows();
+  _syncInvoiceSeasonFromDate();
 }
 function printInvoice(){
   const customer = document.getElementById('inv-cust').value || T('cust');
@@ -13298,6 +13314,7 @@ function setDoseTab(tab){
 
 function renderDosePage(){
   loadDosesDB();
+  _initAgroSeasonControls();
   // ملء فلتر المستودع
   const depSel=document.getElementById('dose-dep-filter');
   if(depSel){
@@ -13443,7 +13460,9 @@ function saveDoseToHistory(){
 function getObservedDosePerDunum(med){
   // Empirical sales quantity per registered customer dunum; not a label dose or safety recommendation.
   const samples=[];
+  const seasonFilter=document.getElementById('dose-season-filter')?.value||'';
   (salesLog||[]).forEach(r=>{
+    if(seasonFilter && _seasonForSale(r)!==seasonFilter) return;
     const sameName=norm(r.itemName||r.name)===norm(med.name);
     const samePkg=!r.pkg||!med.pkg||norm(r.pkg)===norm(med.pkg);
     if(!sameName||!samePkg) return;
@@ -14416,6 +14435,13 @@ function openEditInvoiceModal(invNo) {
   document.getElementById('ei-customer').value = r0.customer;
   document.getElementById('ei-region').value   = r0.region || '';
   document.getElementById('ei-date').value     = r0.date || todayStr();
+  document.getElementById('ei-notes').value    = r0.invoiceNotes || '';
+  var _editSeason = r0.season || _agroSeasonForDate(r0.date) || '';
+  var _editSeasonEl = document.getElementById('ei-season');
+  if (_editSeasonEl) {
+    _editSeasonEl.innerHTML = '<option value="">غير محدد</option>' + _agroSeasonOptions(_editSeason);
+    _editSeasonEl.value = _editSeason;
+  }
 
   _eiRenderRows();
 
@@ -14577,16 +14603,7 @@ function _eiRenderRows() {
 
     // حقول الرش (المحصول، سبب الرش، تاريخ، مساحة)
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:flex-end">';
-
-    html += '<div style="flex:1;min-width:120px">';
-    html += '<label style="font-size:11px;color:#555;display:block;margin-bottom:3px">🌱 ' + (isAr?'المحصول':'Ürün') + '</label>';
-    html += '<input type="text" placeholder="' + (isAr?'مثال: طماطم، قطن...':'Örn: Domates, Pamuk...') + '" ';
-    html += 'id="ei-spray-crop-' + i + '" value="' + h(r.sprayCrop||'') + '" ';
-    html += 'onchange="_eiUrefChange(' + i + ',\'sprayCrop\',this.value)" ';
-    html += 'style="width:100%;padding:5px 7px;border:1px solid #a5d6a7;border-radius:6px;font-family:inherit;font-size:12px;box-sizing:border-box">';
-    html += '</div>';
-
-    html += '<div style="flex:1;min-width:120px">';
+html += '<div style="flex:1;min-width:120px">';
     html += '<label style="font-size:11px;color:#555;display:block;margin-bottom:3px">🔍 ' + (isAr?'سبب الرش':'İlaçlama Nedeni') + '</label>';
     html += '<input type="text" placeholder="' + (isAr?'مثال: حشرة المن...':'Örn: Yaprak biti...') + '" ';
     html += 'id="ei-spray-reason-' + i + '" value="' + h(r.sprayReason||'') + '" ';
@@ -14714,7 +14731,7 @@ function eiAddRow() {
     region: (_eiRows[0] ? _eiRows[0].region : ''),
     date: (_eiRows[0] ? _eiRows[0].date : todayStr()),
     invNo: _editInvNo,
-    sprayReason:'', sprayUsageType:'', sprayCrop:'',
+    sprayReason:'', sprayUsageType:'',
     sprayArea:'', sprayDate:'', sprayInterval:'',
     urefType:'', urefVal:'', urefUnit:'', urefNote:'',
     _isNew: true
@@ -14742,6 +14759,8 @@ function saveEditedInvoice() {
   var newCustomer = document.getElementById('ei-customer').value.trim();
   var newRegion   = document.getElementById('ei-region').value.trim();
   var newDate     = document.getElementById('ei-date').value || todayStr();
+  var newInvoiceNotes = (document.getElementById('ei-notes').value || '').trim();
+  var newSeason = (document.getElementById('ei-season').value || _agroSeasonForDate(newDate) || 'غير محدد');
 
   if (!newCustomer) { showToast(T('editInvEnterCust'), 'err'); return; }
 
@@ -14764,7 +14783,6 @@ function saveEditedInvoice() {
     var _eiUrefValEl      = document.getElementById('ei-uref-val-' + i);
     var _eiUrefUnitEl     = document.getElementById('ei-uref-unit-' + i);
     var _eiUrefNoteEl     = document.getElementById('ei-uref-note-' + i);
-    var _eiSprayCropEl    = document.getElementById('ei-spray-crop-' + i);
     var _eiSprayReasonEl  = document.getElementById('ei-spray-reason-' + i);
     var _eiSprayDateEl    = document.getElementById('ei-spray-date-' + i);
     var _eiSprayIntEl     = document.getElementById('ei-spray-interval-' + i);
@@ -14772,7 +14790,6 @@ function saveEditedInvoice() {
     if (_eiUrefValEl)     r.urefVal       = _eiUrefValEl.value;
     if (_eiUrefUnitEl)    r.urefUnit      = _eiUrefUnitEl.value;
     if (_eiUrefNoteEl)    r.urefNote      = _eiUrefNoteEl.value;
-    if (_eiSprayCropEl)   r.sprayCrop     = _eiSprayCropEl.value;
     if (_eiSprayReasonEl) r.sprayReason   = _eiSprayReasonEl.value;
     if (_eiSprayDateEl)   r.sprayDate     = _eiSprayDateEl.value;
     if (_eiSprayIntEl)    r.sprayInterval = _eiSprayIntEl.value;
@@ -14862,10 +14879,11 @@ function saveEditedInvoice() {
       date:newDate,invNo:invNo,customer:newCustomer,region:newRegion,name:item.name,pkg:item.pkg,
       qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
       urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',
-      sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',sprayCrop:r.sprayCrop||'',
+      invoiceNotes:newInvoiceNotes,sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',
       sprayArea:_tMetaEdit.sprayArea,sprayDate:_tMetaEdit.sprayDate,sprayInterval:r.sprayInterval||'',
       invoiceAuto:true,customerAreaDunum:_tMetaEdit.customerAreaDunum,doseType:_tMetaEdit.doseType,doseReference:_tMetaEdit.doseReference,
-      drugType:_tMetaEdit.drugType,activeCompound:_tMetaEdit.activeCompound,hazardClass:_tMetaEdit.hazardClass
+      drugType:_tMetaEdit.drugType,activeCompound:_tMetaEdit.activeCompound,hazardClass:_tMetaEdit.hazardClass,
+      season:newSeason
     });
     _saveInvoiceDoseReference(item,r,invNo,newDate,newCustomer);
   });
@@ -14953,7 +14971,6 @@ function updateLangSprayPage() {
     'spray-lbl-total':    T('sprayStatTotal'),
     'spray-clear-btn':    T('sprayClearFilters'),
     'spray-th-drug':      T('sprayThDrug'),
-    'spray-th-crop':      T('sprayThCrop'),
     'spray-th-customer':  T('sprayThCustomer'),
     'spray-th-reason':    T('sprayThReason'),
     'spray-th-usagetype': T('sprayThUsageType'),
@@ -14980,7 +14997,6 @@ function updateLangSprayPage() {
     'spray-opt-soon':      T('sprayFilterSoon'),
     'spray-opt-ok':        T('sprayFilterOk'),
     'spray-opt-noint':     T('sprayFilterNoInterval'),
-    'spray-opt-allcrops':  T('sprayAllCrops'),
     'spray-opt-alltypes':  T('sprayAllTypes'),
     'spray-opt-preventive':T('sprayTypePreventiveLabel'),
     'spray-opt-curative':  T('sprayTypeCurativeLabel'),
@@ -15007,6 +15023,8 @@ function updateLangSprayPage() {
 
 function renderSprayReminderPage() {
   updateLangSprayPage();
+  var seasonHost=document.getElementById('spray-season-filter');
+  if(seasonHost){var current=seasonHost.value||_agroSeasonForDate(todayStr());seasonHost.innerHTML='<option value="">كل المواسم</option>'+_agroSeasonOptions(current);seasonHost.value=current||'';}
   var now = new Date();
   var monthNames = T('sprayMonthNames');
   var monthLbl = document.getElementById('spray-month-label');
@@ -15021,7 +15039,7 @@ function renderSprayReminderPage() {
       var legacyType=legacyItem?_getDrugTypeForItem(legacyItem.id):null;
       var legacyDose=legacyItem?(dosesDB||[]).find(function(d){return Number(d.medId)===Number(legacyItem.id);}):null;
       var legacyArea=_getCustomerAreaDunum(s.customer);
-      if(legacyType||legacyDose||s.sprayCrop||s.sprayReason){
+      if(legacyType||legacyDose||s.sprayReason){
         s.invoiceAuto=true;s.customerAreaDunum=Number(s.customerAreaDunum)||legacyArea;
         s.drugType=s.drugType||(legacyType?legacyType.type:'');
         s.activeCompound=s.activeCompound||(legacyType?legacyType.compound:'');
@@ -15032,7 +15050,7 @@ function renderSprayReminderPage() {
         if(!s.sprayDate)s.sprayDate=s.date;
       }
     }
-    if(!s.sprayCrop && !s.sprayReason && !(s.invoiceAuto && (s.drugType || s.doseReference || s.urefType))) return; // الفواتير المصنفة أو المرتبطة بمرجع جرعة فقط
+    if(!s.sprayReason && !(s.invoiceAuto && (s.drugType || s.doseReference || s.urefType))) return; // الفواتير المصنفة أو المرتبطة بمرجع جرعة فقط
     var sprayDate = s.sprayDate || s.date;
     var nextDate = null;
     var daysUntil = null;
@@ -15061,10 +15079,13 @@ function renderSprayReminderPage() {
       sprayReason: s.sprayReason || s.drugType || '—',
       sprayUsageType: s.sprayUsageType || (s.invoiceAuto ? (currentLang==='ar'?'مرتبط بفاتورة':'Faturaya bağlı') : '—'),
       sprayArea: s.sprayArea || (s.customerAreaDunum ? String(s.customerAreaDunum) : '—'),
-      sprayInterval: s.sprayInterval || '',
+      sprayInterval: s.sprayInterval || '', season:_seasonForSale(s),
       customerAreaDunum: Number(s.customerAreaDunum)||0, drugType:s.drugType||'', activeCompound:s.activeCompound||'', doseReference:s.doseReference||null,
     });
   });
+
+  var selectedSpraySeason=document.getElementById('spray-season-filter')?.value||'';
+  if(selectedSpraySeason) _sprayAllRecords=_sprayAllRecords.filter(function(r){return r.season===selectedSpraySeason;});
 
   // ترتيب: المتأخر أولاً ثم القريب ثم الباقي
   _sprayAllRecords.sort(function(a,b) {
@@ -15074,15 +15095,6 @@ function renderSprayReminderPage() {
     if(a.daysUntil !== null && b.daysUntil !== null) return a.daysUntil - b.daysUntil;
     return (a.sprayDate||'').localeCompare(b.sprayDate||'');
   });
-
-  // تحديث فلتر المحاصيل
-  var crops = [...new Set(_sprayAllRecords.map(function(r){ return r.sprayCrop; }).filter(function(c){ return c && c !== '—'; }))].sort();
-  var cropSel = document.getElementById('spray-filter-crop');
-  if(cropSel) {
-    cropSel.innerHTML = '<option value="">'+T('sprayAllCrops')+'</option>' +
-      crops.map(function(c){ return '<option value="'+h(c)+'">'+h(c)+'</option>'; }).join('');
-  }
-
   // تحديث الإحصائيات
   var stats = {overdue:0, soon:0, ok:0};
   _sprayAllRecords.forEach(function(r){ if(stats[r.status]!==undefined) stats[r.status]++; });
@@ -15105,16 +15117,13 @@ function renderSprayReminderPage() {
 function filterSprayReminders() {
   var search = norm((document.getElementById('spray-search')?.value || '').trim());
   var filterStatus = document.getElementById('spray-filter-status')?.value || '';
-  var filterCrop = document.getElementById('spray-filter-crop')?.value || '';
   var filterType = document.getElementById('spray-filter-type')?.value || '';
 
   var list = _sprayAllRecords.filter(function(r) {
     if(search && !norm(r.name||'').includes(search) &&
-       !norm(r.sprayCrop||'').includes(search) &&
        !norm(r.customer||'').includes(search) &&
        !norm(r.sprayReason||'').includes(search)) return false;
     if(filterStatus && r.status !== filterStatus) return false;
-    if(filterCrop && r.sprayCrop !== filterCrop) return false;
     if(filterType && r.sprayUsageType !== filterType) return false;
     return true;
   });
@@ -15169,7 +15178,6 @@ function filterSprayReminders() {
     return '<tr style="background:'+sc.bg+';border-bottom:2px solid '+sc.border+'">'+
       '<td style="color:var(--gy5);font-size:11px">'+(i+1)+'</td>'+
       '<td><strong>'+h(r.name)+'</strong><br><span class="bdg bb2" style="font-size:9px">'+h(r.pkg)+'</span><br><small style="color:var(--gy5);font-size:10px">'+h(r.invNo)+'</small></td>'+
-      '<td><strong>'+h(r.sprayCrop)+'</strong></td>'+
       '<td style="font-size:12px">'+h(r.customer)+'</td>'+
       '<td style="font-size:12px;color:var(--gy7)">'+h(r.sprayReason)+'</td>'+
       '<td>'+usageLabel+'</td>'+
@@ -15182,13 +15190,16 @@ function filterSprayReminders() {
 }
 
 function clearSprayFilters() {
-  ['spray-search','spray-filter-status','spray-filter-crop','spray-filter-type'].forEach(function(id) {
+  ['spray-search','spray-filter-status','spray-filter-type'].forEach(function(id) {
     var el = document.getElementById(id);
     if(el) el.value = '';
   });
   filterSprayReminders();
 }
 
+
+// تهيئة قوائم المحاصيل والمواسم بعد تحميل الواجهة
+setTimeout(function(){try{_initAgroSeasonControls();}catch(e){}},250);
 </script>
 </body>
 </html>
