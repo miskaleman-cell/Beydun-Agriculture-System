@@ -1,4 +1,17 @@
-BEYDUN AGRO — V20.13
+## V20.18 — Dashboard cleanup
+- Stock-alerts panel removed from the dashboard; expanded invoice rows fit phone screens. Data format and existing backups are unchanged.
+
+## V20.17 — Aggregated invoice edit log
+- One cumulative edit record per invoice (grouped by edit number), dashboard/About mobile layout fixes. Data format and existing backups are unchanged.
+
+
+## V20.16 UI improvements
+- Clearer invoice add-row button, responsive movement controls, corrected price filter label, mobile price toolbar, and two-column customer summary cards.
+- Existing saved data format and records are unchanged.
+
+BEYDUN AGRO V20.16 — Invoice Edit Integrity Fix
+
+BEYDUN AGRO — V20.14
 
 # Beydun Agriculture System — تطبيق PWA
 

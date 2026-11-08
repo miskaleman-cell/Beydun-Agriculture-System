@@ -1,3 +1,51 @@
+## V20.18 — Dashboard cleanup and expanded invoice rows fix
+- Removed the "Stock alerts" panel (unpriced-items list) from the dashboard; "Recent movements" now uses the full width. The bell alerts center and the price-management unpriced filter are unchanged.
+- Fixed clipped content when expanding a customer invoice in the movement log: the details table was forced to 500px wide and its location column fell off-screen on phones. It now fits the screen at 360/390/412px in Arabic and Turkish.
+- The location column in expanded invoices now shows only the warehouse (the customer is already in the row header), which makes rows shorter and easier to read.
+- No stock, invoice, customer, or backup data format was changed.
+- Tested in headless Chromium: all pages in two languages at three phone widths, about 1,400 randomized create/edit/cancel operations (no stock-invariant violations), backup round-trip, reload persistence. Excel export, printing, PWA install and real iOS/Android devices were not tested.
+
+## V20.17 — Aggregated invoice edit log and mobile layout fixes
+- Each invoice now keeps ONE aggregated edit record that accumulates every edit instead of replacing the previous one. Changes are grouped by edit number and date; "before" values (customer, date, region, notes, season) come from the first edit, "after" values from the latest.
+- Older single-edit records (V20.13/V20.14) merge automatically: their existing changes become edit 1 and the next save becomes edit 2.
+- The record header shows the total number of changes and edits (for example "5 changes · 3 edits"), in Arabic and Turkish.
+- Dashboard "Recent movements" table now fits the card on phones (fixed column widths, no hidden type/quantity columns).
+- About page: large statistic values (such as stock value) no longer clip; the system label now follows APP_VERSION instead of the fixed "v4.0".
+- Grouped movement-log rows (invoice summaries and edit records) stay inside the screen width on phones, so the date is no longer cut off.
+- No stock, invoice, customer, or backup data format was changed; existing backups load unchanged.
+- Tested in headless Chromium: 24 pages x 2 languages x 2 phone widths with no overflow or JS errors, about 1,400 randomized create/edit/cancel operations with no stock-invariant violations, backup round-trip, reload persistence, and forced-failure rollback. Excel export, printing, PWA install and real iOS/Android devices were not tested.
+
+## V20.16 — Dashboard and About page mobile fixes
+- Fixed dashboard warehouse-distribution cards overflowing the phone viewport; cards now wrap into a responsive two-column layout (one column on very narrow screens).
+- Prevented About-page statistic and feature cards from being clipped and constrained their contents on mobile.
+- Updated the manager display name to MAHMUD BİDOUN.
+- Forced the contact phone number to render left-to-right in Arabic and Turkish layouts while preserving its tap-to-call link.
+- Synchronized the in-app APP_VERSION with this release number.
+
+## V20.15 — Mobile UI clarity and responsive layout
+- Increased contrast and touch target size for the invoice “Add row” button on its dark toolbar.
+- Reflowed movement-log search, filter, and Excel controls on phones so none are pushed off-screen.
+- Fixed the price-management unpriced filter button: removed the literal JavaScript template expression and connected the label to the Arabic/Turkish translation key.
+- Reflowed price-management actions into a two-column mobile toolbar with readable button contrast.
+- Changed customer statistics from four narrow columns to a two-by-two grid on phones; constrained card contents to prevent clipping.
+- Added mobile bottom spacing so the customer list and remaining page content can scroll above the fixed bottom navigation.
+- No customer, invoice, stock, or backup data was modified.
+- JavaScript syntax and ZIP integrity checks passed; a full interactive browser/device test was not available.
+
+## V20.14 — Invoice edit integrity and movement-log fixes
+- Prevented empty reference units from being rewritten as “—” on unchanged saves.
+- No-op invoice saves now create no movement/edit record and do not touch stock.
+- Invoice metadata changes (customer, region, date, notes, season) are recorded.
+- Edit comparison is row-based, preserving duplicate-product rows and detecting second-row price changes.
+- Missing legacy stock items no longer block metadata-only invoice edits; changing their product/quantity/warehouse is still rejected safely.
+- Added/removed/renamed products and warehouse changes are described in the edit log.
+- New customer names are added to the customer register.
+- Blank drug names now produce validation errors.
+- Edit entries are excluded from OUT filtering and dashboard stock movement summaries.
+- Movement Excel export renders edit notes as readable text instead of raw JSON.
+- Cancelling an invoice also removes its invoice-edit summary.
+- Added narrow-screen layout rules for the before/after column.
+
 ## 🏷️ BEYDUN AGRO V20.13 — 8 November 2026
 ### سجل واضح لتعديلات الفواتير بدلاً من أسطر استرجاع المخزون المتكررة
 - عند تعديل فاتورة، لا تُضاف حركات RestoreInv منفصلة لكل دواء؛ يُعاد المخزون داخلياً دون تشويش سجل الحركات.

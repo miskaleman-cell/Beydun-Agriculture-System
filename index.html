@@ -1643,6 +1643,118 @@ body.force-desktop .desktop-toggle-btn{bottom:16px;background:linear-gradient(13
 .nav-btn.app-dragging{opacity:.35}.nav-btn.app-drop-target{border-top:3px solid #c9a84c!important}
 body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-120{font-size:120%}
 </style>
+
+<style id="invoice-edit-log-responsive">
+.mov-invoice-edit details{max-width:100%;}
+.mov-invoice-edit details>div{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.mov-invoice-edit table{width:100%;min-width:0;table-layout:fixed;}
+.mov-invoice-edit th,.mov-invoice-edit td{overflow-wrap:anywhere;word-break:break-word;}
+@media(max-width:480px){.mov-invoice-edit table{font-size:11px!important;} .mov-invoice-edit th:nth-child(1),.mov-invoice-edit td:nth-child(1){width:34%;} .mov-invoice-edit th:nth-child(2),.mov-invoice-edit td:nth-child(2){width:22%;} .mov-invoice-edit th:nth-child(3),.mov-invoice-edit td:nth-child(3){width:44%;} .mov-invoice-edit summary{gap:6px!important;padding:9px 7px!important;font-size:12px!important;} }
+</style>
+
+<style id="mobile-ui-polish-v20-15">
+/* Clear contrast for the add-row action on the dark invoice toolbar. */
+#page-invoice #b-inv-add{
+  background:#ffffff!important;color:#174b36!important;border:2px solid #d8e7df!important;
+  font-weight:800!important;box-shadow:0 2px 5px rgba(0,0,0,.12);min-height:38px
+}
+#page-invoice #b-inv-add:active{background:#e8f5e9!important;transform:translateY(1px)}
+/* Keep movement search, filter and export controls visible on narrow phones. */
+#page-movements .ph{gap:10px;flex-wrap:wrap}
+#page-movements .ph>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;max-width:100%}
+#page-movements #movSearch{min-width:0!important;flex:1 1 170px}
+#page-movements #movFilter{min-width:0;flex:1 1 130px}
+#page-movements .ph .btn{flex:0 0 auto;min-height:36px}
+/* Price-management toolbar: never print a literal template expression; wrap all controls. */
+#page-prices .ph{gap:10px;flex-wrap:wrap}
+#page-prices .ph>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;max-width:100%}
+#page-prices .ph .sb{min-width:120px;max-width:220px;flex:1 1 140px}
+#page-prices #btn-unpriced{background:#e8f5e9!important;color:#175b37!important;border:1px solid #a5d6a7!important;font-weight:800!important;min-height:36px}
+#page-prices #btn-bulk-edit{background:#fff3bf!important;color:#704600!important;border:1px solid #f2d46f!important;font-weight:800!important;min-height:36px}
+#page-prices #btn-save-prices{background:#176b45!important;color:#fff!important;border:1px solid #176b45!important;font-weight:800!important;min-height:36px}
+/* Customer form and summary cards must fit the phone viewport and clear the bottom nav. */
+#page-customers{min-width:0;width:100%}
+#page-customers .panel{min-width:0;max-width:100%}
+#page-customers #cust-stats{width:100%;min-width:0}
+#page-customers #cust-stats>.sc{min-width:0;overflow:hidden}
+#page-customers #cust-stats .si-info{min-width:0;overflow:hidden}
+@media(max-width:600px){
+  .main{padding-left:10px!important;padding-right:10px!important;padding-bottom:calc(105px + env(safe-area-inset-bottom,0px))!important}
+  #page-invoice .ph{align-items:flex-start;flex-direction:column;padding:12px}
+  #page-invoice .ph>div{width:100%;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}
+  #page-invoice .ph>div .btn{justify-content:center;white-space:normal;min-height:42px;padding:8px 6px;font-size:12px}
+  #page-movements .ph{align-items:stretch;flex-direction:column;padding:12px}
+  #page-movements .ph .pt{width:100%}
+  #page-movements .ph>div{width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
+  #page-movements #movSearch{grid-column:1/-1;width:100%;min-height:40px}
+  #page-movements #movFilter{width:100%;min-height:40px}
+  #page-movements .ph .btn{width:100%;justify-content:center;min-height:40px}
+  #page-prices .ph{align-items:stretch;flex-direction:column;padding:12px}
+  #page-prices .ph .pt{width:100%}
+  #page-prices .ph>div{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #page-prices .ph .sb{grid-column:1/-1;width:100%;max-width:none}
+  #page-prices #priceSearch{width:100%;min-height:40px}
+  #page-prices #btn-unpriced,#page-prices #btn-bulk-edit,#page-prices #btn-save-prices{width:100%;justify-content:center;white-space:normal;min-height:42px;padding:7px 5px}
+  #page-prices #unpriced-count{align-self:center}
+  #page-customers #cust-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-bottom:14px!important}
+  #page-customers #cust-stats>.sc{padding:10px 8px;gap:8px;border-radius:10px}
+  #page-customers #cust-stats .si{width:36px;height:36px;font-size:18px;flex:0 0 36px}
+  #page-customers #cust-stats .si-info h3{font-size:19px!important;max-width:100%!important}
+  #page-customers #cust-stats .si-info p{font-size:10px;line-height:1.4}
+  #page-customers #cust-form-panel .pb{padding:12px}
+  #page-customers #cust-form-panel .fg{grid-template-columns:minmax(0,1fr)!important}
+  #page-customers .ph>div{max-width:100%;flex-wrap:wrap}
+}
+</style>
+
+
+<style id="v2016-responsive-about-fixes">
+/* V20.16: dashboard distribution cards must wrap within the viewport */
+#dashLocations{width:100%;max-width:100%;min-width:0;overflow:hidden;box-sizing:border-box}
+#dashLocations>div{grid-template-columns:repeat(2,minmax(0,1fr))!important;width:100%;max-width:100%;box-sizing:border-box}
+#dashLocations>div>*{min-width:0;max-width:100%;overflow-wrap:anywhere;box-sizing:border-box}
+#page-dashboard .panel,#page-about .about-info,#page-about .about-hero,
+#page-about .about-stats,#page-about .about-cards{min-width:0;max-width:100%;box-sizing:border-box}
+#page-about .about-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+#page-about .about-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+#page-about .info-val{min-width:0;overflow-wrap:anywhere}
+#page-about .info-val a[href^="tel:"]{direction:ltr!important;unicode-bidi:isolate!important;display:inline-block;white-space:nowrap}
+@media(max-width:600px){
+  #dashLocations>div{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  #dashLocations>div>*{padding:12px!important}
+  #dashLocations>div>*>div{min-width:0;flex-wrap:wrap}
+  #page-about .about-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #page-about .about-cards{grid-template-columns:1fr;gap:12px}
+  #page-about .about-card{width:100%;min-width:0;padding:20px 16px;box-sizing:border-box}
+  #page-about .about-info{padding:18px 14px}
+  #page-about .info-row{min-width:0;gap:10px}
+  #page-about .info-row>div:last-child{min-width:0;flex:1}
+  #page-about .info-val{font-size:13px}
+}
+@media(max-width:360px){
+  #dashLocations>div{grid-template-columns:1fr!important}
+  #page-about .about-stats{grid-template-columns:1fr}
+}
+/* V20.17 — dashboard recent-movements, About stats, grouped movement rows on phones */
+#dashMov{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#dashMov table{min-width:0!important;width:100%;table-layout:fixed}
+#dashMov td{padding:6px 6px!important;overflow-wrap:anywhere;word-break:break-word}
+#dashMov td:nth-child(1){width:76px}
+#dashMov td:nth-child(3){width:64px}
+#dashMov td:nth-child(4){width:38px;text-align:center}
+#page-about .astat{padding:16px 8px;min-width:0}
+#page-about .astat h4{font-size:clamp(16px,4.6vw,28px);line-height:1.25;overflow-wrap:anywhere}
+@media(max-width:560px){
+  .mov-invoice-edit>td>details,.mov-invoice-summary>td>details{position:sticky;inset-inline-start:0;width:min(calc(100vw - 32px),100%)}
+}
+/* V20.18 — expanded invoice rows must fit the phone width */
+.mov-invoice-group table{width:100%;min-width:0!important;table-layout:fixed}
+.mov-invoice-group th,.mov-invoice-group td{overflow-wrap:anywhere;word-break:break-word}
+.mov-invoice-summary details>div{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mov-invoice-group th{padding:8px 4px!important}
+.mov-invoice-summary th:nth-child(2),.mov-invoice-summary td:nth-child(2){width:58px;text-align:center}
+</style>
+
 </head>
 <body>
 
@@ -1747,11 +1859,7 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
 <!-- DASHBOARD -->
 <div id="page-dashboard">
   <div class="sg" id="dashStats"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="panel">
-      <div class="ph"><span class="pt" id="lbl-alerts" data-key="stockAlerts">⚠️ تنبيهات المخزون</span><span class="bdg br" id="alertCnt">0</span></div>
-      <div style="padding:12px" id="dashAlerts"></div>
-    </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px">
     <div class="panel">
       <div class="ph"><span class="pt" id="lbl-recent" data-key="recentMovements">🔄 آخر الحركات</span></div>
       <div id="dashMov"></div>
@@ -1782,14 +1890,14 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
       <div class="info-icon">👤</div>
       <div>
         <div class="info-label" id="lbl-manager">المدير العام</div>
-        <div class="info-val">MAHMUD BEYDUN</div>
+        <div class="info-val">MAHMUD BİDOUN</div>
       </div>
     </div>
     <div class="info-row">
       <div class="info-icon">📞</div>
       <div>
         <div class="info-label" id="lbl-phone">رقم الهاتف</div>
-        <div class="info-val"><a href="tel:+905536747147">0553 674 71 47</a></div>
+        <div class="info-val"><a href="tel:+905536747147" dir="ltr" style="direction:ltr;unicode-bidi:isolate;display:inline-block">+90 553 674 71 47</a></div>
       </div>
     </div>
     <div class="info-row">
@@ -1803,7 +1911,7 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
       <div class="info-icon">🌐</div>
       <div>
         <div class="info-label" id="lbl-system">النظام</div>
-        <div class="info-val">Beydun Agriculture System v4.0</div>
+        <div class="info-val" id="aboutSysVer">Beydun Agriculture System</div>
       </div>
     </div>
   </div>
@@ -2327,7 +2435,7 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
       <span class="pt" id="lbl-prices-t" data-key="prices">💰 إدارة الأسعار</span>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div class="sb"><span>🔍</span><input id="priceSearch" placeholder="..." oninput="debouncedFilterPrices()"></div>
-        <button class="btn bsm" id="btn-unpriced" onclick="toggleUnpricedPrices()">${T('noPriceFilter')}</button>
+        <button class="btn bsm" id="btn-unpriced" data-key="noPriceFilter" onclick="toggleUnpricedPrices()">💰 Fiyatsız İlaçlar</button>
         <span id="unpriced-count" style="font-size:11px;color:var(--gy5)"></span>
         <button class="btn bam bsm" onclick="openBulkModal()" id="btn-bulk-edit" data-key="bulkEdit">✏️ تعديل جماعي</button>
         <button class="btn bxl bsm" onclick="savePrices()" id="btn-save-prices" data-key="savePricesBtn">💾 حفظ الأسعار</button>
@@ -4451,7 +4559,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.13';
+var APP_VERSION = '20.18';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -7458,6 +7566,7 @@ function movTypeLabel(type){
     'إخراج':T('movTypes')[2]||'إخراج','Çıkış':T('movTypes')[2]||'Çıkış',
     'مرتجع':T('movTypes')[4]||'مرتجع','İade':T('movTypes')[4]||'İade',
     'نقل':T('movTypes')[3]||'نقل','Transfer':T('movTypes')[3]||'Transfer',
+    'تعديل':currentLang==='ar'?'تعديل':'Düzenleme','Düzenleme':currentLang==='ar'?'تعديل':'Düzenleme',
   };
   return map[type]||type;
 }
@@ -8348,13 +8457,7 @@ function renderDashboard(){
     <div class="sc green"><div class="si g">🏭</div><div class="si-info"><h3 style="color:var(--g7);font-size:20px">${(q1+q2+q3).toLocaleString('en-US')}</h3><p>${T('totalUnits')}</p></div></div>
     <div class="sc blue"><div class="si b">💰</div><div class="si-info"><h3 style="color:var(--b7);font-size:18px">${numFmt(todS)}</h3><p>${T('todaySales')}</p></div></div>
     <div class="sc teal"><div class="si t">📋</div><div class="si-info"><h3 style="color:var(--tl)">${auditLog.length}</h3><p>${T('audit')}</p></div></div>`;
-  const np=db.filter(x=>x.price===0);
-  document.getElementById('alertCnt').textContent=np.length+' '+T('noPrice');
-  document.getElementById('dashAlerts').innerHTML=np.slice(0,8).map(x=>`
-    <div class="al ala" style="margin-bottom:6px;font-size:11px;padding:7px 10px">
-      <span>💰</span><strong>${h(x.name)}</strong><span style="color:var(--gy5);margin-right:4px">(${h(depN(x.dep))})</span>
-    </div>`).join('')+(np.length>8?`<div style="text-align:center;color:var(--gy5);font-size:11px">+${np.length-8}...</div>`:'');
-  const recent=[...[...movements].reverse(),...returnsLog.slice().reverse().map(r=>({date:r.date,name:r.name,type:'مرتجع',qty:r.qty}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
+  const recent=[...[...movements].filter(m=>String(m.loc||'').indexOf('InvoiceEdit→')!==0).reverse(),...returnsLog.slice().reverse().map(r=>({date:r.date,name:r.name,type:'مرتجع',qty:r.qty}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
   document.getElementById('dashMov').innerHTML=recent.length?
     '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
     recent.map(m=>{const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
@@ -8386,6 +8489,7 @@ function renderAbout(){
   const totalQty=db.reduce((s,x)=>s+x.qty,0);
   const totalVal=db.reduce((s,x)=>s+x.qty*x.price,0);
   const totalSales=salesLog.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);
+  var _sv=document.getElementById('aboutSysVer');if(_sv)_sv.textContent='Beydun Agriculture System v'+APP_VERSION;
   document.getElementById('aboutStats').innerHTML=`
     <div class="astat"><h4>${totalItems}</h4><p>${T('totalItems')}</p></div>
     <div class="astat"><h4>${totalQty.toLocaleString('en-US')}</h4><p>${T('totalUnits')}</p></div>
@@ -10266,7 +10370,7 @@ function renderMovements(){
       return !q || [e.m.name,e.m.type,e.m.loc,e.m.by,e.m.notes,e.m.qty,e.m.date].some(function(v){return norm(String(v??'')).includes(q);});
     }
     if(e.kind==='edit'){
-      if(ft && ft!=='OUT')return false;
+      if(ft)return false;
       var p=e.payload||{};
       return !q || [e.m.by,e.m.loc,e.m.date,p.invNo,p.customerBefore,p.customerAfter].concat((p.changes||[]).flatMap(function(c){return [c.item,c.field,c.from,c.to];})).some(function(v){return norm(String(v??'')).includes(q);});
     }
@@ -10288,20 +10392,22 @@ function renderMovements(){
         if(c.field==='discount')return ar?'الخصم':'İndirim';
         if(c.field==='added')return ar?'إضافة صنف':'Ürün eklendi';
         if(c.field==='removed')return ar?'حذف صنف':'Ürün kaldırıldı';
-        return c.field||'';
+        var extra={drug:ar?'الدواء':'Ürün',warehouse:ar?'المستودع':'Depo',customer:ar?'الزبون':'Müşteri',region:ar?'المنطقة':'Bölge',date:ar?'التاريخ':'Tarih',invoiceNotes:ar?'ملاحظات الفاتورة':'Fatura notu',season:ar?'الموسم':'Sezon',urefType:ar?'نوع الاستخدام':'Kullanım türü',urefVal:ar?'قيمة الجرعة':'Doz değeri',urefUnit:ar?'وحدة الجرعة':'Doz birimi'};return extra[c.field]||c.field||'';
       };
+      var _lastEdit=null;
       var detail=changes.map(function(c){
-        var changeText=(c.field==='added')?(ar?'أُضيفت كمية':'eklendi'):(c.field==='removed')?(ar?'حُذفت كمية':'kaldırıldı'):(ar?'من':'önce')+' '+h(c.from)+' '+(ar?'إلى':'→')+' '+h(c.to);
-        return `<tr><td style="text-align:start;padding:7px 5px;font-weight:700">${h(c.item||'—')}</td><td style="padding:7px 5px">${h(fieldLabel(c))}</td><td style="padding:7px 5px;color:#2e7d32;font-weight:700">${changeText}</td></tr>`;
+        var head='';if(Number(p.editCount)>1&&c.edit!==_lastEdit){_lastEdit=c.edit;head=`<tr><td colspan="3" style="padding:6px 5px;background:rgba(255,193,7,.16);font-weight:800;font-size:11px">✏️ ${ar?'التعديل':'Düzenleme'} ${h(c.edit||1)}${c.at?' · '+fmtDate(c.at):''}</td></tr>`;}
+        var fromVal=c.field==='warehouse'?depN(c.from):c.from, toVal=c.field==='warehouse'?depN(c.to):c.to; var changeText=(c.field==='added')?(ar?'أُضيفت كمية':'eklendi'):(c.field==='removed')?(ar?'حُذفت كمية':'kaldırıldı'):(ar?'من':'önce')+' '+h(fromVal)+' '+(ar?'إلى':'→')+' '+h(toVal);
+        return head+`<tr><td style="text-align:start;padding:7px 5px;font-weight:700">${h(c.item||'—')}</td><td style="padding:7px 5px">${h(fieldLabel(c))}</td><td style="padding:7px 5px;color:#2e7d32;font-weight:700">${changeText}</td></tr>`;
       }).join('') || `<tr><td colspan="3" style="padding:8px;text-align:center;color:var(--gy5)">${ar?'تم حفظ تعديل بيانات الفاتورة دون تغيير كميات أو أسعار الأصناف':'Fatura bilgileri güncellendi; ürün miktarı/fiyatı değişmedi'}</td></tr>`;
       var customerLabel=(p.customerBefore&&p.customerBefore!==p.customerAfter)?h(p.customerBefore)+' ← ':'';
-      return `<tr class="mov-invoice-edit"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(255,193,7,.09)"><span>✏️ ${ar?'تعديل فاتورة':'Fatura düzenleme'} ${h(p.invNo||String(e.m.loc||'').replace('InvoiceEdit→',''))}</span><span>${h(p.customerAfter||e.m.by||'')}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.m.date)}</span><span class="bdg ba">${changes.length} ${ar?'تغييرات':'değişiklik'}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><div style="font-size:12px;margin-bottom:7px;color:var(--gy6)">${ar?'الزبون: ':'Müşteri: '}${customerLabel}${h(p.customerAfter||e.m.by||'')}</div><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الحقل':'Alan'}</th><th>${ar?'التغيير':'Değişiklik'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
+      return `<tr class="mov-invoice-edit"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(255,193,7,.09)"><span>✏️ ${ar?'تعديل فاتورة':'Fatura düzenleme'} ${h(p.invNo||String(e.m.loc||'').replace('InvoiceEdit→',''))}</span><span>${h(p.customerAfter||e.m.by||'')}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.m.date)}</span><span class="bdg ba">${changes.length} ${ar?'تغييرات':'değişiklik'}${Number(p.editCount)>1?' · '+h(p.editCount)+' '+(ar?'تعديلات':'düzenleme'):''}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><div style="font-size:12px;margin-bottom:7px;color:var(--gy6)">${ar?'الزبون: ':'Müşteri: '}${customerLabel}${h(p.customerAfter||e.m.by||'')}</div><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الحقل':'Alan'}</th><th>${ar?'التغيير':'Değişiklik'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
     }
     if(e.kind!=='sale')return _movRow(e.m);
     var items=e.items;
     var total=items.reduce(function(sum,x){return sum+(Number(x.m.qty)||0);},0);
     var ar=currentLang==='ar';
-    var detail=items.map(function(x){return `<tr><td style="text-align:start;padding:7px 5px">${h(x.m.name)}</td><td style="padding:7px 5px">${h(x.m.qty)}</td><td style="padding:7px 5px">${h(x.m.loc||'—')}</td></tr>`;}).join('');
+    var detail=items.map(function(x){return `<tr><td style="text-align:start;padding:7px 5px">${h(x.m.name)}</td><td style="padding:7px 5px">${h(x.m.qty)}</td><td style="padding:7px 5px">${h((function(l){l=String(l||'');var i=l.lastIndexOf(' | ');return (i>=0?l.slice(i+3):l.replace(/^Sale→/,''))||'—';})(x.m.loc))}</td></tr>`;}).join('');
     return `<tr class="mov-invoice-summary"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(46,125,50,.055)"><span>${ar?'🧾 فاتورة':'🧾 Fatura'} ${h(e.invNo)}</span><span>${h(e.customer)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.date)}</span><span class="bdg br">${ar?'إخراج':'Çıkış'} · ${items.length} ${ar?'أدوية':'ürün'} · ${h(total)}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الكمية':'Miktar'}</th><th>${ar?'الموقع':'Konum'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
   }
   const body=document.getElementById('movBody');
@@ -11838,7 +11944,7 @@ function _doImportStockFromXlsx(){
   inp.click();
 }
 function exportSalesExcel(){const rF=document.getElementById('sales-reg')?.value||'';const cF=trNorm(document.getElementById('sales-cust')?.value||'').trim();const list=salesLog.filter(s=>salesFilter(s)&&(!rF||s.region===rF)&&(!cF||trNorm(s.customer).includes(cF)));const h=currentLang==='ar'?['التاريخ','الفاتورة','العميل','المنطقة','الدواء','الكمية','السعر','خصم%','الإجمالي']:['Tarih','Fatura','Müşteri','Bölge','İlaç','Miktar','Fiyat','İndirim%','Toplam ₺'];const rows=list.map(r=>[fmtDate(r.date),r.invNo,r.customer,r.region||'—',r.name,r.qty,r.price,r.disc,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','','','','','',list.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0)]);const _isAr=currentLang==='ar';dlXlsx(makeWb(h,rows,_isAr?'المبيعات':'Satışlar'),`${_isAr?'مبيعات':'satislar'}_${salesPeriod}_${todayStr()}.xlsx`);showToast('📥');}
-function exportMovementsExcel(){const h=T('tblMov');const rows=movements.map(m=>[fmtDate(m.date),m.name,movTypeLabel(m.type),m.qty,m.loc,m.by,m.notes||'']);const _isArM=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArM?'الحركات':'Hareketler'),`${_isArM?'حركات':'hareketler'}_${todayStr()}.xlsx`);showToast('📥');}
+function exportMovementsExcel(){const h=T('tblMov');const rows=movements.map(m=>{let note=m.notes||'';if(String(m.loc||'').indexOf('InvoiceEdit→')===0){try{const p=JSON.parse(note);note=(p.changes||[]).map(c=>[c.item,c.field,c.from+' → '+c.to].join(': ')).join(' | ');if(p.customerBefore!==p.customerAfter)note+=' | '+(currentLang==='ar'?'الزبون: ':'Müşteri: ')+p.customerBefore+' → '+p.customerAfter;}catch(e){}}return [fmtDate(m.date),String(m.loc||'').indexOf('InvoiceEdit→')===0?(currentLang==='ar'?'تعديل فاتورة':'Fatura düzenleme'):m.name,movTypeLabel(m.type),m.qty,m.loc,m.by,note];});const _isArM=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArM?'الحركات':'Hareketler'),`${_isArM?'حركات':'hareketler'}_${todayStr()}.xlsx`);showToast('📥');}
 function exportReturnsExcel(){const h=currentLang==='ar'?['التاريخ','الزبون','الدواء','العبوة','المستودع','الكمية','الفاتورة','السبب']:['Tarih','Müşteri','İlaç','Ambalaj','Depo','Miktar','Fatura','Sebep'];const rows=returnsLog.map(r=>[fmtDate(r.date),r.customer,r.name,r.pkg,depN(r.dep),r.qty,r.invRef||'',r.reason]);const _isArR=currentLang==='ar';dlXlsx(makeWb(h,rows,_isArR?'المرتجعات':'İadeler'),`${_isArR?'مرتجعات':'iadeler'}_${todayStr()}.xlsx`);showToast('📥');}
 function exportInvoiceExcel(){const isAr=currentLang==='ar';const customer=document.getElementById('inv-cust').value||'';const invNo=document.getElementById('inv-no').value;const date=document.getElementById('inv-date').value||todayStr();const region=document.getElementById('inv-region').value;const vr=invoiceRows.filter(r=>r.name&&r.qty>0);const sub=vr.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);const h=T('tblInv').slice(0,6);const rows=vr.map((r,i)=>[i+1,r.name,r.pkg,r.qty,r.price,r.qty*r.price*(1-r.disc/100)]);rows.push(['','','','',T('subTotal'),sub]);rows.push(['','','','',T('grandTotal'),sub]);const ws=XLSX.utils.aoa_to_sheet([[`${T('invoiceNoLabel')}: ${invNo}`],[`${T('customerLabel')}: ${customer}`],[`${T('date')}: ${fmtDate(date)}`],[`${T('regionLabel')}: ${region||'—'}`],[''],h,...rows]);const wb2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb2,ws,isAr?'فاتورة':'Fatura');dlXlsx(wb2,`${isAr?'فاتورة':'fatura'}_${invNo}.xlsx`);showToast('📥');}
 function exportAuditExcel(){const h=T('tblAudit');const rows=auditLog.map(e=>[e.id,e.date,e.time,actionLabel(e.action),e.itemName,e.pkg,depN(e.dep),e.qtyBefore,e.qtyAfter,e.qtyDelta,e.priceBefore,e.priceAfter,e.priceDelta,e.by,e.notes]);const isAr=currentLang==='ar';dlXlsx(makeWb(h,rows,isAr?'سجل التعديلات':'Düzenleme Kayıtları'),`${isAr?'سجل_التعديلات':'duzenleme_kayitlari'}_${todayStr()}.xlsx`);showToast('📥 '+T('audit'));}
@@ -14480,7 +14586,7 @@ function cancelInvoice(invNo) {
 
   // حذف من movements المرتبطة بالفاتورة (سجلات البيع الأصلية)
   movements = movements.filter(function(m){
-    return !(m.notes === invNo && m.loc && m.loc.indexOf('Sale→') === 0);
+    return !(m.notes === invNo && m.loc && m.loc.indexOf('Sale→') === 0) && m.loc !== ('InvoiceEdit→' + invNo);
   });
 
   saveAll();
@@ -14505,7 +14611,7 @@ function openEditInvoiceModal(invNo) {
 
   _editInvNo = invNo;
   // نسخ عميق للصفوف للتعديل المحلي
-  _eiRows = rows.map(function(r){ return Object.assign({}, r, {_isNew: false}); });
+  _eiRows = rows.map(function(r, idx){ return Object.assign({}, r, {_isNew: false, _originalIndex: idx}); });
   var r0 = rows[0];
 
   document.getElementById('edit-inv-title').textContent = '✏️ تعديل الفاتورة — ' + invNo;
@@ -14770,15 +14876,14 @@ function _eiWarehouseChange(i, val) {
   _eiRows[i].dep = Number(val) || val;
   var r = _eiRows[i];
   var item = _findDbItem(r.name, r.pkg, r.dep);
-  // تحديث السعر تلقائياً فقط عند اختيار دواء/مستودع مطابق له سعر معروف
-  if (item && Number(item.price) > 0) {
-    r.price = Number(item.price);
-    var priceEl = document.getElementById('ei-price-' + i);
-    if (priceEl) priceEl.value = r.price;
-  }
+  // تغيير المستودع لا يغيّر السعر المدخل تلقائياً؛ حتى لا يحدث تعديل صامت.
 }
 
 function _eiDrugChange(i, val) {
+  // لا نمسح اسم الصنف بصمت؛ يُرفض عند الحفظ برسالة تحقق واضحة.
+  val = String(val || '').trim();
+  if (!val) { if (_eiRows[i]) _eiRows[i]._drugCleared = true; return; }
+  if (_eiRows[i]) _eiRows[i]._drugCleared = false;
   // تحليل "اسم — عبوة"
   var sep = val.indexOf(' — ');
   var name = sep > -1 ? val.slice(0, sep).trim() : val.trim();
@@ -14826,208 +14931,133 @@ function closeEditInvModal() {
   _editInvNo = null;
 }
 
-// إنشاء وصف واضح للفروقات بين الفاتورة قبل التعديل وبعده.
-function _buildInvoiceEditChanges(oldRows, newRows) {
-  var map = new Map();
-  function keyOf(r){ return [String(r.name||'').trim(),String(r.pkg||'').trim(),String(r.dep||'')].join('¦'); }
-  function add(rows, side){
-    rows.forEach(function(r){
-      var key=keyOf(r), rec=map.get(key);
-      if(!rec){rec={name:r.name||'',pkg:r.pkg||'',dep:r.dep||'',oldQty:0,newQty:0,oldPrices:[],newPrices:[],oldDiscs:[],newDiscs:[]};map.set(key,rec);}
-      if(side==='old'){rec.oldQty+=Number(r.qty)||0;rec.oldPrices.push(Number(r.price)||0);rec.oldDiscs.push(Number(r.disc)||0);}
-      else{rec.newQty+=Number(r.qty)||0;rec.newPrices.push(Number(r.price)||0);rec.newDiscs.push(Number(r.disc)||0);}
-    });
-  }
-  add(oldRows,'old'); add(newRows,'new');
-  var changes=[];
-  map.forEach(function(r){
-    var label=r.name+(r.pkg?' ('+r.pkg+')':'');
-    if(r.oldQty && r.newQty && r.oldQty!==r.newQty) changes.push({item:label,field:'qty',from:r.oldQty,to:r.newQty});
-    var op=r.oldPrices.length?r.oldPrices[0]:null, np=r.newPrices.length?r.newPrices[0]:null;
-    if(op!==null&&np!==null&&op!==np) changes.push({item:label,field:'price',from:op,to:np});
-    var od=r.oldDiscs.length?r.oldDiscs[0]:null, nd=r.newDiscs.length?r.newDiscs[0]:null;
-    if(od!==null&&nd!==null&&od!==nd) changes.push({item:label,field:'discount',from:od,to:nd});
-    if(!r.oldQty&&r.newQty) changes.push({item:label,field:'added',from:0,to:r.newQty});
-    if(r.oldQty&&!r.newQty) changes.push({item:label,field:'removed',from:r.oldQty,to:0});
+// إنشاء فروقات دقيقة على مستوى كل صف؛ يحافظ على الأسعار المختلفة للدواء المكرر.
+function _buildInvoiceEditChanges(oldRows, newRows, metaBefore, metaAfter) {
+  var changes=[], oldMap=new Map(), newMap=new Map();
+  oldRows.forEach(function(r,i){oldMap.set(i,r);});
+  newRows.forEach(function(r,i){newMap.set(r._originalIndex!==undefined?r._originalIndex:('new-'+i),r);});
+  var keys=new Set(Array.from(oldMap.keys()).concat(Array.from(newMap.keys())));
+  function label(r){return r?String(r.name||'')+(r.pkg?' ('+r.pkg+')':''):'';}
+  function push(item,field,from,to){if(String(from??'')!==String(to??''))changes.push({item:item||'—',field:field,from:from??'',to:to??''});}
+  keys.forEach(function(k){
+    var a=oldMap.get(k),b=newMap.get(k);
+    if(!a&&b){changes.push({item:label(b),field:'added',from:0,to:b.qty});return;}
+    if(a&&!b){changes.push({item:label(a),field:'removed',from:a.qty,to:0});return;}
+    var item=label(b)||label(a);
+    if(label(a)!==label(b))push(item,'drug',label(a),label(b));
+    if(String(a.dep||'')!==String(b.dep||''))push(item,'warehouse',a.dep,b.dep);
+    push(item,'qty',a.qty,b.qty);push(item,'price',a.price,b.price);push(item,'discount',a.disc||0,b.disc||0);
+    push(item,'urefType',a.urefType||'',b.urefType||'');push(item,'urefVal',a.urefVal||'',b.urefVal||'');push(item,'urefUnit',a.urefUnit||'',b.urefUnit||'');
   });
+  metaBefore=metaBefore||{};metaAfter=metaAfter||{};
+  ['customer','region','date','invoiceNotes','season'].forEach(function(k){push('—',k,metaBefore[k]||'',metaAfter[k]||'');});
   return changes;
 }
 
-// ── حفظ التعديل: rollback + apply ─────────────────────────────────────────
+// حفظ التعديل مع تحقق مسبق ونسخة rollback داخل الذاكرة.
 function saveEditedInvoice() {
   if (!_editInvNo) return;
-  var invNo   = _editInvNo;
-  var oldInvoiceSnapshot = salesLog.filter(function(s){ return s.invNo === invNo; }).map(function(r){ return Object.assign({},r); });
-  if (!oldInvoiceSnapshot.length) {
-    showToast('⚠️ خطأ: لم يُعثر على الفاتورة', 'err'); return;
-  }
-
-  var newCustomer = document.getElementById('ei-customer').value.trim();
-  var newRegion   = document.getElementById('ei-region').value.trim();
-  var newDate     = document.getElementById('ei-date').value || todayStr();
-  var newInvoiceNotes = (document.getElementById('ei-notes').value || '').trim();
-  var newSeason = (document.getElementById('ei-season').value || _agroSeasonForDate(newDate) || 'غير محدد');
-
-  if (!newCustomer) { showToast(T('editInvEnterCust'), 'err'); return; }
-
-  // قراءة القيم المُدخَلة من الـ DOM إلى _eiRows
-  var errors = [];
-  _eiRows.forEach(function(r, i) {
-    var drugVal = (document.getElementById('ei-drug-' + i) || {}).value || '';
-    var sep = drugVal.indexOf(' — ');
-    if (sep > -1) { r.name = drugVal.slice(0, sep).trim(); r.pkg = drugVal.slice(sep+3).trim(); }
-    else if (drugVal) { r.name = drugVal.trim(); }
-
-    r.qty   = parseInt((document.getElementById('ei-qty-' + i) || {}).value, 10) || 0;
-    r.price = parseFloat((document.getElementById('ei-price-' + i) || {}).value) || 0;
-    r.disc  = Math.min(100, Math.max(0, parseFloat((document.getElementById('ei-disc-' + i) || {}).value) || 0));
-    var depEl = document.getElementById('ei-dep-' + i);
-    if (depEl) r.dep = Number(depEl.value) || depEl.value;
-
-    // قراءة حقول الجرعة / مرجع الاستخدام
-    var _eiUrefTypeEl     = document.getElementById('ei-uref-type-' + i);
-    var _eiUrefValEl      = document.getElementById('ei-uref-val-' + i);
-    var _eiUrefUnitEl     = document.getElementById('ei-uref-unit-' + i);
-    var _eiUrefNoteEl     = document.getElementById('ei-uref-note-' + i);
-    var _eiSprayReasonEl  = document.getElementById('ei-spray-reason-' + i);
-    var _eiSprayDateEl    = document.getElementById('ei-spray-date-' + i);
-    var _eiSprayIntEl     = document.getElementById('ei-spray-interval-' + i);
-    if (_eiUrefTypeEl)    r.urefType      = _eiUrefTypeEl.value;
-    if (_eiUrefValEl)     r.urefVal       = _eiUrefValEl.value;
-    if (_eiUrefUnitEl)    r.urefUnit      = _eiUrefUnitEl.value;
-    if (_eiUrefNoteEl)    r.urefNote      = _eiUrefNoteEl.value;
-    if (_eiSprayReasonEl) r.sprayReason   = _eiSprayReasonEl.value;
-    if (_eiSprayDateEl)   r.sprayDate     = _eiSprayDateEl.value;
-    if (_eiSprayIntEl)    r.sprayInterval = _eiSprayIntEl.value;
-
-    if (!r.name) { errors.push((currentLang==='tr'?'Satır':'الصف') + ' ' + (i+1) + ': ' + T('editInvRowRequired')); return; }
-    if (r.qty <= 0) { errors.push(r.name + ': ' + T('editInvQtyGt0')); return; }
-
-    var item = _findDbItem(r.name, r.pkg, r.dep);
-    var reservedQty = r._isNew ? 0 : r.qty; // للصنف الجديد: لا كمية محجوزة
-    // نحتاج المخزون بعد الاسترداد (= مخزون الآن + ما كان محجوزاً للصنف القديم)
-    // نحسب هذا تقريبياً: item.qty + reservedQty
-    var availableAfterRestore = (item ? item.qty : 0) + (r._isNew ? 0 : r.qty);
-    if (!item) { errors.push('❌ ' + r.name + (r.pkg ? ' ('+r.pkg+')' : '') + ': غير موجود في المخزون'); }
-    else if (r.qty > availableAfterRestore) {
-      errors.push(r.name + ': الكمية ' + r.qty + ' أكبر من المتوفر ' + availableAfterRestore);
-    }
+  var invNo=_editInvNo;
+  var oldRows=salesLog.filter(function(s){return String(s.invNo)===String(invNo);}).map(function(r){return Object.assign({},r);});
+  if(!oldRows.length){showToast('⚠️ '+(currentLang==='ar'?'الفاتورة غير موجودة':'Fatura bulunamadı'),'err');return;}
+  var newCustomer=(document.getElementById('ei-customer').value||'').trim();
+  var newRegion=(document.getElementById('ei-region').value||'').trim();
+  var newDate=document.getElementById('ei-date').value||todayStr();
+  var newInvoiceNotes=(document.getElementById('ei-notes').value||'').trim();
+  var newSeason=document.getElementById('ei-season').value||oldRows[0].season||_agroSeasonForDate(newDate)||'غير محدد';
+  if(!newCustomer){showToast(T('editInvEnterCust'),'err');return;}
+  var errors=[];
+  _eiRows.forEach(function(r,i){
+    var drugEl=document.getElementById('ei-drug-'+i);
+    var drugVal=drugEl?String(drugEl.value||'').trim():String(r.name||'').trim();
+    if(!drugVal){errors.push((currentLang==='tr'?'Satır ':'الصف ')+(i+1)+': '+(currentLang==='tr'?'İlaç adı boş olamaz':'اسم الدواء لا يمكن أن يكون فارغاً'));return;}
+    var sep=drugVal.indexOf(' — ');
+    if(sep>-1){r.name=drugVal.slice(0,sep).trim();r.pkg=drugVal.slice(sep+3).trim();}else{r.name=drugVal;}
+    var qEl=document.getElementById('ei-qty-'+i),pEl=document.getElementById('ei-price-'+i),dEl=document.getElementById('ei-disc-'+i);
+    r.qty=qEl?Number(qEl.value):Number(r.qty);r.price=pEl?Number(pEl.value):Number(r.price);r.disc=dEl?Number(dEl.value):Number(r.disc||0);
+    var depEl=document.getElementById('ei-dep-'+i);if(depEl)r.dep=Number(depEl.value)||depEl.value;
+    var ids=['uref-type','uref-val','uref-unit','uref-note','spray-reason','spray-date','spray-interval'];
+    var fields=['urefType','urefVal','urefUnit','urefNote','sprayReason','sprayDate','sprayInterval'];
+    ids.forEach(function(id,j){var el=document.getElementById('ei-'+id+'-'+i);if(!el)return;if(fields[j]==='urefUnit')return; r[fields[j]]=el.value;}); // الوحدة تُحدَّث فقط عبر onchange لتجنب اختيار المتصفح الافتراضي دون قصد
+    if(!Number.isFinite(r.qty)||r.qty<=0)errors.push(r.name+': '+T('editInvQtyGt0'));
+    if(!Number.isFinite(r.price)||r.price<0)errors.push(r.name+': '+(currentLang==='ar'?'السعر غير صالح':'Geçersiz fiyat'));
+    if(!Number.isFinite(r.disc)||r.disc<0||r.disc>100)errors.push(r.name+': '+(currentLang==='ar'?'الخصم يجب أن يكون بين 0 و100':'İndirim 0-100 arasında olmalı'));
   });
+  if(!_eiRows.length){showToast(T('editInvMinOneItem'),'err');return;}
+  var metaBefore={customer:oldRows[0].customer,region:oldRows[0].region,date:oldRows[0].date,invoiceNotes:oldRows[0].invoiceNotes,season:oldRows[0].season};
+  var metaAfter={customer:newCustomer,region:newRegion,date:newDate,invoiceNotes:newInvoiceNotes,season:newSeason};
+  var changes=_buildInvoiceEditChanges(oldRows,_eiRows,metaBefore,metaAfter);
+  if(errors.length){alert(T('editInvError')+'\n'+errors.join('\n'));return;}
+  // لا تحفظ شيئاً ولا تنشئ حركة عند عدم وجود أي فرق.
+  if(!changes.length){closeEditInvModal();showToast(currentLang==='ar'?'لم يتم إجراء أي تغيير':'Değişiklik yapılmadı');return;}
 
-  // تحقق إجمالي المخزون بعد احتساب كل كميات الفاتورة القديمة التي ستُعاد أولاً.
-  // هذا يمنع تجاوز المخزون عند تكرار الصنف في أكثر من صف أو إضافة صنف جديد.
-  var oldInvoiceRows = oldInvoiceSnapshot;
-  var oldQtyByItem = {};
-  oldInvoiceRows.forEach(function(s) {
-    var oldItem = _findDbItem(s.name, s.pkg, s.dep);
-    if (oldItem) {
-      var key = String(oldItem.id);
-      oldQtyByItem[key] = (oldQtyByItem[key] || 0) + (parseInt(s.qty, 10) || 0);
-    }
+  // احسب مطابقة الصفوف الأصلية. الصنف القديم المفقود يسمح بتعديل بيانات الفاتورة فقط،
+  // لكن لا يسمح بتغيير كميته/دوائه/مستودعه دون وجود سجل مخزون صالح.
+  var oldItemByRow=oldRows.map(function(r){return _findDbItem(r.name,r.pkg,r.dep);});
+  var oldByIndex=new Map();oldRows.forEach(function(r,i){oldByIndex.set(i,r);});
+  var newItemByRow=[], oldQtyById={};
+  oldRows.forEach(function(r,i){var it=oldItemByRow[i];if(it)oldQtyById[String(it.id)]=(oldQtyById[String(it.id)]||0)+(Number(r.qty)||0);});
+  _eiRows.forEach(function(r,i){
+    var old=(r._originalIndex!==undefined)?oldByIndex.get(r._originalIndex):null;
+    var oldItem=old?(oldItemByRow[r._originalIndex]||null):null;
+    var item=_findDbItem(r.name,r.pkg,r.dep);newItemByRow[i]=item;
+    var sameIdentity=old && String(old.name)===String(r.name) && String(old.pkg||'')===String(r.pkg||'') && String(old.dep||'')===String(r.dep||'');
+    if(!item && !(sameIdentity && Number(old.qty)===Number(r.qty))){errors.push('❌ '+r.name+(r.pkg?' ('+r.pkg+')':'')+': '+(currentLang==='ar'?'الصنف غير موجود في المخزون ولا يمكن تغيير كميته أو نقله':'Ürün stokta yok; miktarı/deposu değiştirilemez'));}
   });
-  var requestedByItem = {};
-  var requestedNames = {};
-  _eiRows.forEach(function(r) {
-    if (!r.name || r.qty <= 0) return;
-    var item = _findDbItem(r.name, r.pkg, r.dep || 1);
-    if (!item) return; // سيظهر خطأ عدم وجود الصنف أعلاه
-    var key = String(item.id);
-    requestedByItem[key] = (requestedByItem[key] || 0) + r.qty;
-    requestedNames[key] = item.name + (item.pkg ? ' (' + item.pkg + ')' : '');
-  });
-  Object.keys(requestedByItem).forEach(function(key) {
-    var item = db.find(function(x){ return String(x.id) === key; });
-    if (!item) return;
-    var availableAfterRestore = (parseInt(item.qty, 10) || 0) + (oldQtyByItem[key] || 0);
-    if (requestedByItem[key] > availableAfterRestore) {
-      errors.push('❌ ' + requestedNames[key] + ': الكمية المطلوبة ' +
-        requestedByItem[key] + ' أكبر من المتوفر بعد إعادة الفاتورة ' + availableAfterRestore);
-    }
-  });
+  // تحقق الكميات الإجمالية بعد إعادة كميات الفاتورة القديمة.
+  var requested={};
+  _eiRows.forEach(function(r,i){var it=newItemByRow[i];if(it)requested[String(it.id)]=(requested[String(it.id)]||0)+(Number(r.qty)||0);});
+  Object.keys(requested).forEach(function(id){var it=db.find(function(x){return String(x.id)===id;});var available=(Number(it.qty)||0)+(oldQtyById[id]||0);if(requested[id]>available)errors.push('❌ '+it.name+': '+(currentLang==='ar'?'المطلوب ':'İstenen ')+requested[id]+' > '+available);});
+  if(errors.length){alert(T('editInvError')+'\n'+errors.join('\n'));return;}
 
-  if (!_eiRows.length) { showToast(T('editInvMinOneItem'), 'err'); return; }
-  if (errors.length) { alert(T('editInvError')+'\n' + errors.join('\n')); return; }
-
-  // ── الخطوة 1: إعادة المخزون بالكميات القديمة (الأصناف الأصلية فقط) ──
-  _restoreStockForInvoice(invNo, {silent:true});
-
-  // ── الخطوة 2: حذف السجلات القديمة ──
-  salesLog = salesLog.filter(function(s){ return s.invNo !== invNo; });
-  movements = movements.filter(function(m){
-    return !(m.notes === invNo && m.loc && m.loc.indexOf('Sale→') === 0);
-  });
-
-  // ── الخطوة 3: تطبيق الصفوف الجديدة (قد تكون معدَّلة أو مضافة) ──
-  var saveErrors = [];
-  _eiRows.forEach(function(r) {
-    if (!r.name || r.qty <= 0) return;
-    var item = _findDbItem(r.name, r.pkg, r.dep || 1);
-    if (!item) { saveErrors.push('❌ ' + r.name + ': غير موجود في المخزون'); return; }
-    var gRes = guardStock(item, r.qty, currentLang === 'ar' ? 'تعديل بيع' : 'Satış Düzenleme');
-    if (!gRes.ok) { saveErrors.push(gRes.err); return; }
-    var before = item.qty;
-    item.qty -= r.qty;
-    item.outOfStock = (item.qty === 0);
-    movements.push({
-      date: newDate,
-      name: item.name,
-      type: currentLang === 'ar' ? 'إخراج' : 'Çıkış',
-      qty: r.qty,
-      loc: 'Sale→' + newCustomer,
-      by: newCustomer,
-      notes: invNo
+  // لقطة rollback كاملة للبيانات التي قد تتغير.
+  var snap={db:db.map(function(x){return {id:x.id,qty:x.qty,outOfStock:x.outOfStock};}),salesLog:salesLog.map(function(x){return Object.assign({},x);}),movements:movements.map(function(x){return Object.assign({},x);}),auditLog:auditLog.map(function(x){return Object.assign({},x);}),customers:customers.map(function(x){return Object.assign({},x);}),dosesDB:(dosesDB||[]).map(function(x){return JSON.parse(JSON.stringify(x));})};
+  try{
+    // أعد كميات الصفوف القديمة الموجودة فعلاً في المخزون.
+    oldRows.forEach(function(r,i){var it=oldItemByRow[i];if(it){it.qty=(Number(it.qty)||0)+(Number(r.qty)||0);it.outOfStock=it.qty===0;}});
+    // طبّق الكميات الجديدة؛ الصفوف القديمة التي لم يعد صنفها موجوداً تبقى تاريخياً دون مساس بالمخزون.
+    _eiRows.forEach(function(r,i){var it=newItemByRow[i];if(!it)return;var before=Number(it.qty)||0;if(before<r.qty)throw new Error(it.name+': '+(currentLang==='ar'?'المخزون غير كافٍ':'Yetersiz stok'));it.qty=before-r.qty;it.outOfStock=it.qty===0;});
+    // استبدل سجلات المبيعات فقط بعد نجاح التحقق والحساب.
+    salesLog=salesLog.filter(function(s){return String(s.invNo)!==String(invNo);});
+    _eiRows.forEach(function(r,i){
+      var old=oldRows[i]||{},it=newItemByRow[i],sameMissing=!it;
+      var itemName=it?it.name:r.name,itemPkg=it?it.pkg:r.pkg,itemDep=it?it.dep:r.dep;
+      var tm=it?_invoiceTreatmentMeta(it,r,newCustomer,newDate):{};
+      salesLog.push(Object.assign({},old,{date:newDate,invNo:invNo,customer:newCustomer,region:newRegion,name:itemName,pkg:itemPkg,qty:r.qty,price:r.price,disc:r.disc,dep:itemDep,
+        urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',invoiceNotes:newInvoiceNotes,
+        sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',sprayArea:tm.sprayArea!==undefined?tm.sprayArea:(r.sprayArea||''),sprayDate:r.sprayDate||tm.sprayDate||'',sprayInterval:r.sprayInterval||'',
+        customerAreaDunum:tm.customerAreaDunum!==undefined?tm.customerAreaDunum:(old.customerAreaDunum||0),doseType:tm.doseType||old.doseType||'',doseReference:tm.doseReference||old.doseReference||'',drugType:tm.drugType||old.drugType||'',activeCompound:tm.activeCompound||old.activeCompound||'',hazardClass:tm.hazardClass||old.hazardClass||'',season:newSeason}));
     });
-    addAudit(ACT.SALE, item.name, item.pkg, item.dep, before, item.qty,
-             r.price, r.price, newCustomer,
-             invNo + '|' + (newRegion || '—') + '|' + r.disc + '% [edited]');
-    var _tMetaEdit=_invoiceTreatmentMeta(item,r,newCustomer,newDate);
-    salesLog.push({
-      date:newDate,invNo:invNo,customer:newCustomer,region:newRegion,name:item.name,pkg:item.pkg,
-      qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
-      urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',
-      invoiceNotes:newInvoiceNotes,sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',
-      sprayArea:_tMetaEdit.sprayArea,sprayDate:_tMetaEdit.sprayDate,sprayInterval:r.sprayInterval||'',
-      invoiceAuto:true,customerAreaDunum:_tMetaEdit.customerAreaDunum,doseType:_tMetaEdit.doseType,doseReference:_tMetaEdit.doseReference,
-      drugType:_tMetaEdit.drugType,activeCompound:_tMetaEdit.activeCompound,hazardClass:_tMetaEdit.hazardClass,
-      season:newSeason
+    // حركات المخزون تعكس الفروقات الصافية فقط، وتذكر المستودع.
+    // سجل تعديل واحد مجمّع لكل فاتورة: نقرأ السجل السابق ثم نستبدله بنسخة مدمجة تحتفظ بكل التعديلات.
+    var _prevEdit=null;
+    try{var _pm=movements.find(function(m){return m.loc==='InvoiceEdit→'+invNo;});if(_pm)_prevEdit=JSON.parse(_pm.notes);}catch(_e){_prevEdit=null;}
+    movements=movements.filter(function(m){return !(m.notes===invNo&&m.loc&&m.loc.indexOf('Sale→')===0) && !(m.loc==='InvoiceEdit→'+invNo);});
+    _eiRows.forEach(function(r,i){var it=newItemByRow[i];movements.push({date:newDate,name:it?it.name:r.name,type:currentLang==='ar'?'إخراج':'Çıkış',qty:r.qty,loc:'Sale→'+newCustomer+' | '+depN(r.dep),by:newCustomer,notes:invNo});
+      var old=oldRows[r._originalIndex!==undefined?r._originalIndex:i];
+      if(it && old && (String(old.urefType||'')!==String(r.urefType||'')||String(old.urefVal||'')!==String(r.urefVal||'')||String(old.urefUnit||'')!==String(r.urefUnit||'')||String(old.urefNote||'')!==String(r.urefNote||''))) _saveInvoiceDoseReference(it,r,invNo,newDate,newCustomer);
     });
-    _saveInvoiceDoseReference(item,r,invNo,newDate,newCustomer);
-  });
-
-  if (saveErrors.length) {
-    alert('⚠️ خطأ أثناء تطبيق التعديل:\n' + saveErrors.join('\n'));
+    // سجل تدقيق للمخزون فقط إذا تغيّرت الكمية فعلياً.
+    snap.db.forEach(function(v){var it=db.find(function(x){return x.id===v.id;});if(it && Number(it.qty)!==Number(v.qty)){addAudit(ACT.SALE,it.name,it.pkg,it.dep,v.qty,it.qty,0,0,newCustomer,invNo+' [invoice edit]');}});
+    // لا نضيف سجل تعديل فارغ. أضف العميل الجديد تلقائياً دون حذف العميل السابق.
+    if(!customers.some(function(c){return norm(c.name)===norm(newCustomer);})){customers.push({id:_maxId(customers)+1,name:newCustomer,phone:'',region:newRegion,notes:'',createdAt:todayStr()});}
+    var _editNo=(_prevEdit?(Number(_prevEdit.editCount)||1):0)+1, _stamp=todayStr();
+    var _pb=function(k,fb){return (_prevEdit&&_prevEdit[k]!==undefined)?_prevEdit[k]:fb;};
+    var _oldCh=(_prevEdit&&Array.isArray(_prevEdit.changes))?_prevEdit.changes.map(function(c){return c.edit?c:Object.assign({},c,{edit:1});}):[];
+    var _newCh=changes.map(function(c){return Object.assign({},c,{edit:_editNo,at:_stamp});});
+    var payload={kind:'invoice-edit',invNo:invNo,editCount:_editNo,lastEditAt:_stamp,customerBefore:_pb('customerBefore',metaBefore.customer||''),customerAfter:newCustomer,changes:_oldCh.concat(_newCh),dateBefore:_pb('dateBefore',metaBefore.date||''),dateAfter:newDate,regionBefore:_pb('regionBefore',metaBefore.region||''),regionAfter:newRegion,notesBefore:_pb('notesBefore',metaBefore.invoiceNotes||''),notesAfter:newInvoiceNotes,seasonBefore:_pb('seasonBefore',metaBefore.season||''),seasonAfter:newSeason};
+    movements.push({date:newDate,name:currentLang==='ar'?'تعديل فاتورة':'Fatura düzenleme',type:currentLang==='ar'?'تعديل':'Düzenleme',qty:payload.changes.length,loc:'InvoiceEdit→'+invNo,by:newCustomer,notes:JSON.stringify(payload)});
+    saveAll();
+  }catch(err){
+    snap.db.forEach(function(v){var it=db.find(function(x){return x.id===v.id;});if(it){it.qty=v.qty;if(v.outOfStock!==undefined)it.outOfStock=v.outOfStock;}});
+    salesLog=snap.salesLog;movements=snap.movements;auditLog=snap.auditLog;customers=snap.customers;dosesDB=snap.dosesDB;if(typeof saveDosesDB==='function'){try{saveDosesDB();}catch(e){}}
+    alert((currentLang==='ar'?'لم يتم حفظ التعديل وتم التراجع عن كل التغييرات: ':'Kaydedilemedi; tüm değişiklikler geri alındı: ')+err.message);return;
   }
-
-  // سجل تعديل واحد مرتبط بالزبون والفاتورة، بدلاً من عشرات أسطر RestoreInv.
-  var editChanges = _buildInvoiceEditChanges(oldInvoiceSnapshot, _eiRows);
-  var oldCustomerForEdit = oldInvoiceSnapshot[0] ? String(oldInvoiceSnapshot[0].customer||'') : '';
-  var editPayload = {
-    kind:'invoice-edit', invNo:invNo, customerBefore:oldCustomerForEdit,
-    customerAfter:newCustomer, changes:editChanges,
-    dateBefore:oldInvoiceSnapshot[0] ? oldInvoiceSnapshot[0].date : '',
-    dateAfter:newDate
-  };
-  if (oldCustomerForEdit !== newCustomer) editPayload.customerChanged = true;
-  movements.push({
-    date:newDate, name:'تعديل فاتورة', type:currentLang==='ar'?'تعديل':'Düzenleme',
-    qty:editChanges.length, loc:'InvoiceEdit→'+invNo, by:newCustomer,
-    notes:JSON.stringify(editPayload)
-  });
-
-  saveAll();
-  renderSales();
-  // تحديث صفحة وقت العلاج إن كانت مفتوحة
-  if (typeof renderSprayReminderPage === 'function') {
-    try { renderSprayReminderPage(); } catch(e){}
-  }
-  closeEditInvModal();
-  showToast('✅ ' + invNo + ' — ' + (currentLang === 'ar' ? 'تم تعديل الفاتورة' : 'Fatura güncellendi'));
+  renderSales();if(typeof renderCustomersList==='function')renderCustomersList();if(typeof updateCustDatalist==='function')updateCustDatalist();
+  if(typeof renderSprayReminderPage==='function'){try{renderSprayReminderPage();}catch(e){}}
+  closeEditInvModal();showToast('✅ '+invNo+' — '+(currentLang==='ar'?'تم تعديل الفاتورة':'Fatura güncellendi'));
 }
 
-
-// ══════════════════════════════════════════════════════════════════════════
-// دالة عرض سقف المرتجع في الواجهة
-// ══════════════════════════════════════════════════════════════════════════
 function _updateReturnLimit() {
   var infoEl = document.getElementById('ret-limit-info');
   if (!infoEl) return;
