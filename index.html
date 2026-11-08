@@ -4451,7 +4451,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.9';
+var APP_VERSION = '20.13';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -10200,13 +10200,6 @@ function showDrugMovHistory(name){
 function renderMovements(){
   const ft=document.getElementById('movFilter')?.value||'';
   const q=norm((document.getElementById('movSearch')?.value||'').trim());
-  const list=movements.filter(m=>{
-    if(ft && movTypeCode(m.type)!==ft) return false;
-    if(q && ![m.name,m.type,m.loc,m.by,m.notes,m.qty,m.date].some(v=>norm(String(v??'')).includes(q))) return false;
-    return true;
-  });
-  // سجل الحركات يرتب حسب تاريخ الحركة الفعلي، وليس حسب وقت إدخال السجل.
-  // يدعم YYYY-MM-DD و DD/MM/YYYY، مع إبقاء الأحدث أولاً.
   function _movementDateKey(value){
     if(!value) return 0;
     var v=String(value).trim(), m;
@@ -10215,33 +10208,114 @@ function renderMovements(){
     var parsed=Date.parse(v); return Number.isFinite(parsed)?parsed:0;
   }
   const el=document.getElementById('movTh');if(el)el.innerHTML=T('tblMov').map(hdr=>`<th>${hdr}</th>`).join('');
-  var _movList=[...list].map((m,i)=>({m,i})).sort((a,b)=>_movementDateKey(b.m.date)-_movementDateKey(a.m.date)||(Number(b.m.ts||b.m.createdAt||0)-Number(a.m.ts||a.m.createdAt||0))||b.i-a.i).map(x=>x.m);
-  var MOV_PAGE=250;
-  function _movRow(m){const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
-    return`<tr><td>${fmtDate(m.date)}</td><td><strong class="mov-drug-link" onclick="showDrugMovHistory('${h(m.name)}')" style="cursor:pointer;color:var(--b7);text-decoration:underline" title="${currentLang==='ar'?'عرض سجل الدواء':'İlaç geçmişini gör'}">${h(m.name)}</strong></td>
-      <td><span class="bdg ${tc}">${h(movTypeLabel(m.type))}</span></td>
-      <td><strong>${h(m.qty)}</strong></td><td>${h(m.loc)}</td><td>${h(m.by)}</td>
-      <td style="font-size:11px">${h(m.notes||'—')}</td></tr>`;}
-  var movBodyEl=document.getElementById('movBody');
-  if(!_movList.length){
-    movBodyEl.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gy5)">—</td></tr>`;
-  } else {
-    movBodyEl.innerHTML=_movList.slice(0,MOV_PAGE).map(_movRow).join('');
-    if(_movList.length>MOV_PAGE){
-      var _mPage=0;
-      var _loadMoreMov=function(){
-        _mPage++;
-        var chunk=_movList.slice(_mPage*MOV_PAGE,(_mPage+1)*MOV_PAGE);
-        var lmRow=movBodyEl.querySelector('.mov-load-more');
-        if(lmRow) lmRow.closest('tr').remove();
-        movBodyEl.insertAdjacentHTML('beforeend',chunk.map(_movRow).join(''));
-        if((_mPage+1)*MOV_PAGE<_movList.length){
-          movBodyEl.insertAdjacentHTML('beforeend',`<tr class="mov-load-more"><td colspan="7" style="text-align:center;padding:10px"><button class="btn bs bsm" onclick="(${_loadMoreMov.toString()})()">⬇️ ${_movList.length-(_mPage+1)*MOV_PAGE} ${currentLang==='ar'?'حركة إضافية':'daha'}</button></td></tr>`);
-        }
+
+  // اجمع حركات البيع التابعة للفاتورة في صف واحد قابل للفتح (منسدلة)،
+  // مع إبقاء بقية أنواع الحركات كسطور مستقلة داخل الجدول.
+  var entries=[], groups=new Map();
+  movements.forEach(function(m,index){
+    var loc=String(m.loc||'');
+    var isEdit=/^InvoiceEdit→/.test(loc);
+    if(isEdit){
+      var payload={};try{payload=JSON.parse(String(m.notes||'{}'));}catch(e){}
+      entries.push({kind:'edit',m:m,payload:payload,index:index});return;
+    }
+    // أخفِ أسطر الاسترجاع القديمة الناتجة عن تعديل فاتورة ما زالت موجودة؛
+    // تبقى استرجاعات الفواتير الملغاة ظاهرة كسجل مخزون حقيقي.
+    var restoreMatch=loc.match(/^RestoreInv→(.+)$/);
+    if(restoreMatch && salesLog.some(function(r){return String(r.invNo||'')===restoreMatch[1];})) return;
+    var isSale=/^Sale\s*→/.test(loc) && (m.type==='إخراج'||m.type==='Çıkış') && String(m.notes||'').trim();
+    if(!isSale){entries.push({kind:'single',m:m,index:index});return;}
+    var customer=String(m.by||String(m.loc||'').replace(/^Sale\s*→\s*/,''));
+    var key=[String(m.notes||'').trim(),String(m.date||''),customer].join('¦');
+    var g=groups.get(key);
+    if(!g){g={kind:'sale',invNo:String(m.notes||'').trim(),date:m.date,customer:customer,items:[],firstIndex:index};groups.set(key,g);entries.push(g);}
+    g.items.push({m:m,index:index});
+  });
+
+  // ترتيب الأدوية داخل الفاتورة يؤخذ من salesLog نفسه، وهو مصدر تفاصيل الفاتورة؛
+  // ثم نطابق كل سطر حركة مع سطر المبيعات المقابل دون تغيير أي بيانات.
+  entries.forEach(function(e){
+    if(e.kind!=='sale')return;
+    var invoiceRows=(Array.isArray(salesLog)?salesLog:[]).filter(function(r){
+      return String(r.invNo||'').trim()===e.invNo && String(r.date||'')===String(e.date||'') && String(r.customer||'')===e.customer;
+    });
+    if(invoiceRows.length){
+      var remaining=e.items.slice(), ordered=[];
+      invoiceRows.forEach(function(r){
+        var at=remaining.findIndex(function(x){return String(x.m.name||'')===String(r.name||'') && Number(x.m.qty)===Number(r.qty);});
+        if(at>=0) ordered.push(remaining.splice(at,1)[0]);
+      });
+      e.items=ordered.concat(remaining);
+    }else{
+      // عند عدم وجود سجل مبيعات مطابق (بيانات قديمة/مستوردة)، نحافظ على ترتيب الحركة الأصلي.
+      e.items.sort(function(a,b){return a.index-b.index;});
+    }
+  });
+
+  function _entryDate(e){return e.kind==='sale'?e.date:e.m.date;}
+  entries.sort(function(a,b){
+    var d=_movementDateKey(_entryDate(b))-_movementDateKey(_entryDate(a));
+    if(d)return d;
+    return (a.kind==='sale'?a.firstIndex:a.index)-(b.kind==='sale'?b.firstIndex:b.index);
+  });
+
+  // البحث في الفاتورة يبحث أيضاً داخل أسماء أدويتها، ويُبقي الفاتورة كاملة عند فتحها.
+  entries=entries.filter(function(e){
+    if(e.kind==='single'){
+      if(ft && movTypeCode(e.m.type)!==ft)return false;
+      return !q || [e.m.name,e.m.type,e.m.loc,e.m.by,e.m.notes,e.m.qty,e.m.date].some(function(v){return norm(String(v??'')).includes(q);});
+    }
+    if(e.kind==='edit'){
+      if(ft && ft!=='OUT')return false;
+      var p=e.payload||{};
+      return !q || [e.m.by,e.m.loc,e.m.date,p.invNo,p.customerBefore,p.customerAfter].concat((p.changes||[]).flatMap(function(c){return [c.item,c.field,c.from,c.to];})).some(function(v){return norm(String(v??'')).includes(q);});
+    }
+    if(ft && ft!=='OUT')return false;
+    if(!q)return true;
+    return [e.invNo,e.customer,e.date].some(function(v){return norm(String(v??'')).includes(q);}) || e.items.some(function(x){return [x.m.name,x.m.qty,x.m.loc,x.m.notes].some(function(v){return norm(String(v??'')).includes(q);});});
+  });
+
+  function _movRow(m){
+    const tc=(m.type==='إدخال'||m.type==='Giriş')?'bg':(m.type==='إخراج'||m.type==='Çıkış')?'br':(m.type==='مرتجع'||m.type==='İade')?'bret':'ba';
+    return `<tr><td>${fmtDate(m.date)}</td><td><strong class="mov-drug-link" onclick="showDrugMovHistory('${h(m.name)}')" style="cursor:pointer;color:var(--b7);text-decoration:underline" title="${currentLang==='ar'?'عرض سجل الدواء':'İlaç geçmişini gör'}">${h(m.name)}</strong></td><td><span class="bdg ${tc}">${h(movTypeLabel(m.type))}</span></td><td><strong>${h(m.qty)}</strong></td><td>${h(m.loc)}</td><td>${h(m.by)}</td><td style="font-size:11px">${h(m.notes||'—')}</td></tr>`;
+  }
+  function _entryRow(e){
+    if(e.kind==='edit'){
+      var p=e.payload||{}, ar=currentLang==='ar', changes=Array.isArray(p.changes)?p.changes:[];
+      var fieldLabel=function(c){
+        if(c.field==='qty')return ar?'الكمية':'Miktar';
+        if(c.field==='price')return ar?'السعر':'Fiyat';
+        if(c.field==='discount')return ar?'الخصم':'İndirim';
+        if(c.field==='added')return ar?'إضافة صنف':'Ürün eklendi';
+        if(c.field==='removed')return ar?'حذف صنف':'Ürün kaldırıldı';
+        return c.field||'';
       };
-      movBodyEl.insertAdjacentHTML('beforeend',`<tr class="mov-load-more"><td colspan="7" style="text-align:center;padding:10px"><button class="btn bs bsm" onclick="(${_loadMoreMov.toString()})()">⬇️ ${_movList.length-MOV_PAGE} ${currentLang==='ar'?'حركة إضافية':'daha'}</button></td></tr>`);
+      var detail=changes.map(function(c){
+        var changeText=(c.field==='added')?(ar?'أُضيفت كمية':'eklendi'):(c.field==='removed')?(ar?'حُذفت كمية':'kaldırıldı'):(ar?'من':'önce')+' '+h(c.from)+' '+(ar?'إلى':'→')+' '+h(c.to);
+        return `<tr><td style="text-align:start;padding:7px 5px;font-weight:700">${h(c.item||'—')}</td><td style="padding:7px 5px">${h(fieldLabel(c))}</td><td style="padding:7px 5px;color:#2e7d32;font-weight:700">${changeText}</td></tr>`;
+      }).join('') || `<tr><td colspan="3" style="padding:8px;text-align:center;color:var(--gy5)">${ar?'تم حفظ تعديل بيانات الفاتورة دون تغيير كميات أو أسعار الأصناف':'Fatura bilgileri güncellendi; ürün miktarı/fiyatı değişmedi'}</td></tr>`;
+      var customerLabel=(p.customerBefore&&p.customerBefore!==p.customerAfter)?h(p.customerBefore)+' ← ':'';
+      return `<tr class="mov-invoice-edit"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(255,193,7,.09)"><span>✏️ ${ar?'تعديل فاتورة':'Fatura düzenleme'} ${h(p.invNo||String(e.m.loc||'').replace('InvoiceEdit→',''))}</span><span>${h(p.customerAfter||e.m.by||'')}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.m.date)}</span><span class="bdg ba">${changes.length} ${ar?'تغييرات':'değişiklik'}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><div style="font-size:12px;margin-bottom:7px;color:var(--gy6)">${ar?'الزبون: ':'Müşteri: '}${customerLabel}${h(p.customerAfter||e.m.by||'')}</div><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الحقل':'Alan'}</th><th>${ar?'التغيير':'Değişiklik'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
+    }
+    if(e.kind!=='sale')return _movRow(e.m);
+    var items=e.items;
+    var total=items.reduce(function(sum,x){return sum+(Number(x.m.qty)||0);},0);
+    var ar=currentLang==='ar';
+    var detail=items.map(function(x){return `<tr><td style="text-align:start;padding:7px 5px">${h(x.m.name)}</td><td style="padding:7px 5px">${h(x.m.qty)}</td><td style="padding:7px 5px">${h(x.m.loc||'—')}</td></tr>`;}).join('');
+    return `<tr class="mov-invoice-summary"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(46,125,50,.055)"><span>${ar?'🧾 فاتورة':'🧾 Fatura'} ${h(e.invNo)}</span><span>${h(e.customer)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.date)}</span><span class="bdg br">${ar?'إخراج':'Çıkış'} · ${items.length} ${ar?'أدوية':'ürün'} · ${h(total)}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الكمية':'Miktar'}</th><th>${ar?'الموقع':'Konum'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
+  }
+  const body=document.getElementById('movBody');
+  if(!entries.length){body.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gy5)">—</td></tr>`;return;}
+  const PAGE=250;let page=0;
+  function append(){
+    var chunk=entries.slice(page*PAGE,(page+1)*PAGE);
+    body.insertAdjacentHTML('beforeend',chunk.map(_entryRow).join(''));page++;
+    if(page*PAGE<entries.length){
+      var tr=document.createElement('tr');tr.className='mov-load-more';var td=document.createElement('td');td.colSpan=7;td.style.cssText='text-align:center;padding:10px';
+      var btn=document.createElement('button');btn.className='btn bs bsm';btn.textContent=`⬇️ ${entries.length-page*PAGE} ${currentLang==='ar'?'حركة إضافية':'daha'}`;btn.addEventListener('click',function(){tr.remove();append();});td.appendChild(btn);tr.appendChild(td);body.appendChild(tr);
     }
   }
+  body.innerHTML='';append();
 }
 
 function resetAuditFilters(){['auditSearch','auditTypeF','auditDepF','auditDateFrom','auditDateTo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});renderAudit();}
@@ -14354,7 +14428,9 @@ window.__AGRO_SAVED__="{\"schemaVersion\":5,\"db\":[{\"id\":1,\"name\":\"ACİDE 
 // ══════════════════════════════════════════════════════════════════════════
 
 // ── مساعد: إعادة المخزون لفاتورة كاملة (بدون حفظ) ──────────────────────
-function _restoreStockForInvoice(invNo) {
+function _restoreStockForInvoice(invNo, options) {
+  options = options || {};
+  var silent = options.silent === true;
   var rows = salesLog.filter(function(s){ return s.invNo === invNo; });
   rows.forEach(function(r) {
     var item = _findDbItem(r.name, r.pkg, r.dep);
@@ -14362,17 +14438,19 @@ function _restoreStockForInvoice(invNo) {
       var before = item.qty;
       item.qty += r.qty;
       item.outOfStock = false;
-      movements.push({
-        date: todayStr(),
-        name: r.name,
-        type: currentLang === 'ar' ? 'إدخال' : 'Giriş',
-        qty: r.qty,
-        loc: 'RestoreInv→' + invNo,
-        by: 'System',
-        notes: '↩️ ' + invNo
-      });
-      addAudit('VOID_RESTORE', r.name, r.pkg, r.dep, before, item.qty,
-               r.price, r.price, 'System', 'إعادة مخزون: ' + invNo);
+      if (!silent) {
+        movements.push({
+          date: todayStr(),
+          name: r.name,
+          type: currentLang === 'ar' ? 'إدخال' : 'Giriş',
+          qty: r.qty,
+          loc: 'RestoreInv→' + invNo,
+          by: 'System',
+          notes: '↩️ ' + invNo
+        });
+        addAudit('VOID_RESTORE', r.name, r.pkg, r.dep, before, item.qty,
+                 r.price, r.price, 'System', 'إعادة مخزون: ' + invNo);
+      }
     }
   });
 }
@@ -14748,11 +14826,39 @@ function closeEditInvModal() {
   _editInvNo = null;
 }
 
+// إنشاء وصف واضح للفروقات بين الفاتورة قبل التعديل وبعده.
+function _buildInvoiceEditChanges(oldRows, newRows) {
+  var map = new Map();
+  function keyOf(r){ return [String(r.name||'').trim(),String(r.pkg||'').trim(),String(r.dep||'')].join('¦'); }
+  function add(rows, side){
+    rows.forEach(function(r){
+      var key=keyOf(r), rec=map.get(key);
+      if(!rec){rec={name:r.name||'',pkg:r.pkg||'',dep:r.dep||'',oldQty:0,newQty:0,oldPrices:[],newPrices:[],oldDiscs:[],newDiscs:[]};map.set(key,rec);}
+      if(side==='old'){rec.oldQty+=Number(r.qty)||0;rec.oldPrices.push(Number(r.price)||0);rec.oldDiscs.push(Number(r.disc)||0);}
+      else{rec.newQty+=Number(r.qty)||0;rec.newPrices.push(Number(r.price)||0);rec.newDiscs.push(Number(r.disc)||0);}
+    });
+  }
+  add(oldRows,'old'); add(newRows,'new');
+  var changes=[];
+  map.forEach(function(r){
+    var label=r.name+(r.pkg?' ('+r.pkg+')':'');
+    if(r.oldQty && r.newQty && r.oldQty!==r.newQty) changes.push({item:label,field:'qty',from:r.oldQty,to:r.newQty});
+    var op=r.oldPrices.length?r.oldPrices[0]:null, np=r.newPrices.length?r.newPrices[0]:null;
+    if(op!==null&&np!==null&&op!==np) changes.push({item:label,field:'price',from:op,to:np});
+    var od=r.oldDiscs.length?r.oldDiscs[0]:null, nd=r.newDiscs.length?r.newDiscs[0]:null;
+    if(od!==null&&nd!==null&&od!==nd) changes.push({item:label,field:'discount',from:od,to:nd});
+    if(!r.oldQty&&r.newQty) changes.push({item:label,field:'added',from:0,to:r.newQty});
+    if(r.oldQty&&!r.newQty) changes.push({item:label,field:'removed',from:r.oldQty,to:0});
+  });
+  return changes;
+}
+
 // ── حفظ التعديل: rollback + apply ─────────────────────────────────────────
 function saveEditedInvoice() {
   if (!_editInvNo) return;
   var invNo   = _editInvNo;
-  if (!salesLog.some(function(s){ return s.invNo === invNo; })) {
+  var oldInvoiceSnapshot = salesLog.filter(function(s){ return s.invNo === invNo; }).map(function(r){ return Object.assign({},r); });
+  if (!oldInvoiceSnapshot.length) {
     showToast('⚠️ خطأ: لم يُعثر على الفاتورة', 'err'); return;
   }
 
@@ -14810,7 +14916,7 @@ function saveEditedInvoice() {
 
   // تحقق إجمالي المخزون بعد احتساب كل كميات الفاتورة القديمة التي ستُعاد أولاً.
   // هذا يمنع تجاوز المخزون عند تكرار الصنف في أكثر من صف أو إضافة صنف جديد.
-  var oldInvoiceRows = salesLog.filter(function(s){ return s.invNo === invNo; });
+  var oldInvoiceRows = oldInvoiceSnapshot;
   var oldQtyByItem = {};
   oldInvoiceRows.forEach(function(s) {
     var oldItem = _findDbItem(s.name, s.pkg, s.dep);
@@ -14843,7 +14949,7 @@ function saveEditedInvoice() {
   if (errors.length) { alert(T('editInvError')+'\n' + errors.join('\n')); return; }
 
   // ── الخطوة 1: إعادة المخزون بالكميات القديمة (الأصناف الأصلية فقط) ──
-  _restoreStockForInvoice(invNo);
+  _restoreStockForInvoice(invNo, {silent:true});
 
   // ── الخطوة 2: حذف السجلات القديمة ──
   salesLog = salesLog.filter(function(s){ return s.invNo !== invNo; });
@@ -14891,6 +14997,22 @@ function saveEditedInvoice() {
   if (saveErrors.length) {
     alert('⚠️ خطأ أثناء تطبيق التعديل:\n' + saveErrors.join('\n'));
   }
+
+  // سجل تعديل واحد مرتبط بالزبون والفاتورة، بدلاً من عشرات أسطر RestoreInv.
+  var editChanges = _buildInvoiceEditChanges(oldInvoiceSnapshot, _eiRows);
+  var oldCustomerForEdit = oldInvoiceSnapshot[0] ? String(oldInvoiceSnapshot[0].customer||'') : '';
+  var editPayload = {
+    kind:'invoice-edit', invNo:invNo, customerBefore:oldCustomerForEdit,
+    customerAfter:newCustomer, changes:editChanges,
+    dateBefore:oldInvoiceSnapshot[0] ? oldInvoiceSnapshot[0].date : '',
+    dateAfter:newDate
+  };
+  if (oldCustomerForEdit !== newCustomer) editPayload.customerChanged = true;
+  movements.push({
+    date:newDate, name:'تعديل فاتورة', type:currentLang==='ar'?'تعديل':'Düzenleme',
+    qty:editChanges.length, loc:'InvoiceEdit→'+invNo, by:newCustomer,
+    notes:JSON.stringify(editPayload)
+  });
 
   saveAll();
   renderSales();
