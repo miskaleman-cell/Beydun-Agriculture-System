@@ -1,3 +1,19 @@
+## V20.25 — Logo fix for local/Android opening
+- Fixed the broken logo images (header, home banner, side menu, About page) that appeared when the app was opened locally (content:// / file://), where external files do not load.
+- The optimized 700×700 WebP logo is now embedded once inside index.html (single copy, ~40KB) and applied to every logo location; favicons/apple-touch icon are embedded too.
+- Updated APP_VERSION and service-worker cache to 20.25. Data structures and backups unchanged.
+
+## V20.24 — External optimized logo assets
+- Removed three large Base64 copies of the same logo from index.html and replaced them with one local WebP asset (master-logo.webp).
+- Optimized the logo to 700×700 WebP and added it to the service-worker precache for offline use.
+- Updated the service-worker cache version and APP_VERSION to 20.24.
+- Kept app data structures and customer, invoice, stock, and backup logic unchanged.
+
+## V20.23 — Splash icon safe-area adjustment
+- Reduced the logo scale inside all app icon assets and added generous white padding.
+- Updated maskable icons with a wider safe area so the full BAYDOUN wordmark, AGRO SİSTEM line, and tagline remain visible inside Android's rounded icon/splash mask.
+- Updated app and service-worker cache version to 20.23. No business data structures were changed.
+
 ## V20.22 — إصلاح ظهور الشعار في فتح Android المحلي
 - تضمين صورة الشعار الرسمية داخل HTML بصيغة data URI حتى تظهر عند فتح التطبيق من مسار Android content:// دون الاعتماد على تحميل ملفات الصور المجاورة.
 - إعادة إنشاء أيقونات PWA وfavicon بمصدر الصورة الرسمية نفسها وبأحجامها المطلوبة.

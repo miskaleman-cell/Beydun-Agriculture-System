@@ -4,13 +4,14 @@
 
 // ⚠️ رقم الإصدار يُحدَّث تلقائياً من index.html عبر postMessage
 // لتغيير الإصدار يدوياً: غيّر APP_VERSION في index.html فقط
-let CACHE_NAME = 'baydoun-agro-v33';
+let CACHE_NAME = 'baydoun-agro-v20.25';
 
 // Local app shell + CDN assets to pre-cache for offline use
 const PRECACHE = [
   './',
   'index.html',
   'manifest.json',
+  'master-logo.webp',
   'icon-192.png',
   'icon-512.png',
   'icon-maskable-192.png',
