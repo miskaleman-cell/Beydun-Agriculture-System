@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * verify-version.js
- * يتأكد أن رقم "BEYDUN AGRO V<رقم>" في أعلى CHANGELOG.md يطابق
+ * يتأكد أن رقم "BAYDOUN AGRO V<رقم>" في أعلى CHANGELOG.md يطابق
  * APP_VERSION في index.html. شغّله قبل كل تسليم:
  *
  *   node verify-version.js
@@ -26,10 +26,10 @@ if (!fs.existsSync(INDEX_PATH)) fail('index.html غير موجود في ' + DIR)
 const changelog = fs.readFileSync(CHANGELOG_PATH, 'utf8');
 const indexHtml = fs.readFileSync(INDEX_PATH, 'utf8');
 
-// يبحث عن أول عنوان فعلي بصيغة: ## 🏷️ BEYDUN AGRO V<رقم>
-// (محصور بالـ## ليتجاهل الإشارة التوضيحية لهذه الصيغة في أعلى الملف)
-const changelogMatch = changelog.match(/^##\s*🏷️?\s*BEYDUN AGRO V(\d+(?:\.\d+)?)/im);
-if (!changelogMatch) fail('لم يُعثر على عنوان "BEYDUN AGRO V<رقم>" في CHANGELOG.md');
+// يقبل عناوين سجل التغييرات بصيغتي V20.19 أو BEYDUN AGRO V20.19،
+// مع رمز اختياري، ويقرأ أول عنوان فعلي يبدأ بمستوى ##.
+const changelogMatch = changelog.match(/^##\s*(?:🏷️\s*)?(?:BAYDOUN AGRO\s+)?V(\d+(?:\.\d+)?)(?:\s|$)/im);
+if (!changelogMatch) fail('لم يُعثر على عنوان "BAYDOUN AGRO V<رقم>" في CHANGELOG.md');
 const changelogVersion = changelogMatch[1];
 
 // يبحث عن: var APP_VERSION = '<رقم>';
@@ -40,11 +40,11 @@ const appVersion = appVersionMatch[1];
 if (changelogVersion !== appVersion) {
   fail(
     'عدم تطابق الإصدار!\n' +
-    '   CHANGELOG.md   → BEYDUN AGRO V' + changelogVersion + '\n' +
+    '   CHANGELOG.md   → BAYDOUN AGRO V' + changelogVersion + '\n' +
     '   index.html     → APP_VERSION = ' + appVersion + '\n' +
     '   حدّث أحدهما ليطابق الآخر قبل التسليم.'
   );
 }
 
-console.log('✅ الإصدار متطابق: BEYDUN AGRO V' + changelogVersion + ' = APP_VERSION ' + appVersion);
+console.log('✅ الإصدار متطابق: BAYDOUN AGRO V' + changelogVersion + ' = APP_VERSION ' + appVersion);
 process.exit(0);

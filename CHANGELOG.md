@@ -1,3 +1,28 @@
+## V20.22 — إصلاح ظهور الشعار في فتح Android المحلي
+- تضمين صورة الشعار الرسمية داخل HTML بصيغة data URI حتى تظهر عند فتح التطبيق من مسار Android content:// دون الاعتماد على تحميل ملفات الصور المجاورة.
+- إعادة إنشاء أيقونات PWA وfavicon بمصدر الصورة الرسمية نفسها وبأحجامها المطلوبة.
+- رفع الإصدار وتحديث اسم ذاكرة Service Worker المؤقتة لإجبار النسخة المستضافة على جلب الملفات الجديدة.
+- لم يتم تعديل بيانات العملاء أو الفواتير أو المخزون.
+
+## BAYDOUN AGRO V20.21 — Replace all app icons with approved master logo
+- Replaced every bundled PWA/app icon (512, 192, maskable, Apple touch, and favicons) with the exact logo image supplied by the owner.
+- Updated the sidebar brand label and image alternative text to BAYDOUN AGRO.
+- Kept the existing app title, owner name, manifest identity, and data structures unchanged.
+- Bumped APP_VERSION to 20.21 so the updated icon assets are refreshed by the service worker.
+
+## BAYDOUN AGRO V20.20 — Brand identity correction
+- Updated the visible app name throughout the interface to BAYDOUN AGRO.
+- Updated the company owner name to MAHMOUD BAYDOUN.
+- Replaced the embedded legacy BEYDUN logo in the app header with the new BAYDOUN logo asset.
+- Updated PWA manifest name/short name and service-worker cache namespace.
+- Preserved existing customer, invoice, medicine, inventory, and backup data structures.
+
+## V20.19 — About name and version verification fix
+- Corrected the manager name on the About page to the requested exact spelling: MAHMOUD BİDOUN.
+- Updated APP_VERSION to 20.19 so the in-app version reflects this release.
+- Fixed verify-version.js so it accepts the actual changelog heading format used by this project (for example, `## V20.19`) as well as the older `BEYDUN AGRO V...` format.
+- No customer, invoice, medicine, stock, or backup data structures were changed. Cloud integration was not added.
+
 ## V20.18 — Dashboard cleanup and expanded invoice rows fix
 - Removed the "Stock alerts" panel (unpriced-items list) from the dashboard; "Recent movements" now uses the full width. The bell alerts center and the price-management unpriced filter are unchanged.
 - Fixed clipped content when expanding a customer invoice in the movement log: the details table was forced to 500px wide and its location column fell off-screen on phones. It now fits the screen at 360/390/412px in Arabic and Turkish.

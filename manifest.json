@@ -1,7 +1,7 @@
 {
-  "name": "Beydun Agriculture System",
-  "short_name": "Beydun Agro",
-  "description": "نظام إدارة مخزون الأدوية الزراعية",
+  "name": "BAYDOUN AGRO",
+  "short_name": "BAYDOUN AGRO",
+  "description": "BAYDOUN AGRO — نظام إدارة مخزون الأدوية الزراعية",
   "start_url": "./index.html",
   "scope": "./",
   "id": "./",

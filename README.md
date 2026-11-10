@@ -9,11 +9,11 @@
 - Clearer invoice add-row button, responsive movement controls, corrected price filter label, mobile price toolbar, and two-column customer summary cards.
 - Existing saved data format and records are unchanged.
 
-BEYDUN AGRO V20.16 — Invoice Edit Integrity Fix
+BAYDOUN AGRO V20.16 — Invoice Edit Integrity Fix
 
-BEYDUN AGRO — V20.14
+BAYDOUN AGRO — V20.14
 
-# Beydun Agriculture System — تطبيق PWA
+# BAYDOUN AGRO — تطبيق PWA
 
 تم تجهيز التطبيق ليعمل كتطبيق ويب تقدمي (PWA) حقيقي وقابل للتثبيت، باستخدام شعار
 التطبيق نفسه (الموجود أصلاً داخل الكود) كأيقونة، وجاهز للنشر مباشرة على GitHub Pages.
@@ -37,7 +37,7 @@ BEYDUN AGRO — V20.14
 
 كل الملفات الآن في المجلد الرئيسي مباشرة (بلا أي مجلدات فرعية)، بما فيها
 الأيقونات. كل الأيقونات مُولَّدة من **الشعار الأصلي** الموجود داخل التطبيق
-(النسر الذهبي وعبارة BEYDUN AGRO SİSTEM بالخلفية الخضراء)، وليست أيقونة عشوائية.
+(النسر الذهبي وعبارة BAYDOUN AGRO SİSTEM بالخلفية الخضراء)، وليست أيقونة عشوائية.
 
 ## 🚀 خطوات النشر على GitHub Pages
 
@@ -50,7 +50,7 @@ BEYDUN AGRO — V20.14
 ```bash
 git init
 git add .
-git commit -m "Beydun Agriculture System - PWA"
+git commit -m "BAYDOUN AGRO - PWA"
 git branch -M main
 git remote add origin https://github.com/USERNAME/REPO-NAME.git
 git push -u origin main

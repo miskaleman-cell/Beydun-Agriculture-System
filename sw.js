@@ -4,7 +4,7 @@
 
 // ⚠️ رقم الإصدار يُحدَّث تلقائياً من index.html عبر postMessage
 // لتغيير الإصدار يدوياً: غيّر APP_VERSION في index.html فقط
-let CACHE_NAME = 'beydun-agro-v31';
+let CACHE_NAME = 'baydoun-agro-v33';
 
 // Local app shell + CDN assets to pre-cache for offline use
 const PRECACHE = [
@@ -90,7 +90,7 @@ self.addEventListener('message', e => {
   // رقم الإصدار يُرسَل من index.html عند التسجيل
   // يُستخدم لتسمية الكاش تلقائياً دون تعديل يدوي في هذا الملف
   if (e.data && e.data.type === 'SET_VERSION') {
-    const newCache = 'beydun-agro-v' + e.data.version;
+    const newCache = 'baydoun-agro-v' + e.data.version;
     if (newCache !== CACHE_NAME) {
       const oldCache = CACHE_NAME;
       CACHE_NAME = newCache;
