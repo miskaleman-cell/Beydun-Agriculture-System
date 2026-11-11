@@ -1,5 +1,6 @@
 ## V20.26 — Roomier splash / launcher icon
 - Regenerated the maskable icons (192/512) with the logo at ~31% of the canvas on pure white, so Android's rounded splash/launcher mask no longer crops the wordmark or tagline and the logo sits comfortably in the centre.
+- Revision b: all icons (any/maskable/apple-touch) enlarged to a medium size (46–50% of canvas) so the logo is readable on the launcher and startup screen without being cropped. Manifest icon URLs carry ?v=20.26b.
 - Updated APP_VERSION and service-worker cache to 20.26. Data structures unchanged.
 
 ## V20.25 — Logo fix for local/Android opening
