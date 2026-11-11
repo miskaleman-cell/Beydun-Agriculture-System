@@ -4,7 +4,7 @@
 
 // ⚠️ رقم الإصدار يُحدَّث تلقائياً من index.html عبر postMessage
 // لتغيير الإصدار يدوياً: غيّر APP_VERSION في index.html فقط
-let CACHE_NAME = 'baydoun-agro-v20.25';
+let CACHE_NAME = 'baydoun-agro-v20.26';
 
 // Local app shell + CDN assets to pre-cache for offline use
 const PRECACHE = [
