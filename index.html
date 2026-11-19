@@ -4567,7 +4567,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.32';
+var APP_VERSION = '20.33';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -12634,8 +12634,10 @@ function renderCustomersList(){
   : `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gy5)">${isAr?'لا يوجد عملاء بعد':'Henüz müşteri yok'}</td></tr>`;
 }
 
+var _custHistCurrentName = '';
 function openCustomerHistory(encodedName){
   const name = decodeURIComponent(encodedName);
+  _custHistCurrentName = name;
   const isAr = currentLang==='ar';
   const reg   = customers.find(c=>c.name===name);
   const sales = salesLog.filter(r=>r.customer===name).sort((a,b)=>b.date.localeCompare(a.date));
@@ -12691,12 +12693,13 @@ function openCustomerHistory(encodedName){
     <!-- Invoices history -->
     <div style="padding:12px 16px 4px;font-size:12px;font-weight:700;color:var(--gy7);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <span>${isAr?'📜 سجل الفواتير':'📜 Fatura Geçmişi'}</span>
-      <div style="display:flex;align-items:center;gap:12px;font-weight:400">
+      <div style="display:flex;align-items:center;gap:10px;font-weight:400;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:var(--gy7)">
           <input type="checkbox" id="custInvSelAll" onchange="_toggleCustInvSelectAll(this.checked)">
           ${isAr?'تحديد الكل':'Tümünü Seç'}
         </label>
         <span id="custInvSelTotal" style="font-size:12px;font-weight:700;color:var(--g8)"></span>
+        <button id="custInvDeleteSelected" class="btn bsm bd" onclick="deleteSelectedCustomerInvoices()" disabled style="opacity:.55;cursor:not-allowed">🗑️ ${isAr?'حذف المحدد':'Seçilenleri Sil'}</button>
       </div>
     </div>
     ${invList.map(inv=>`
@@ -12743,6 +12746,47 @@ function _updateCustInvSelTotal(){
   if(el) el.textContent = checked.length ? `${isAr?'إجمالي المحدد':'Seçili Toplam'} (${checked.length}): ${numFmt(total)} ₺` : '';
   const selAll = document.getElementById('custInvSelAll');
   if(selAll) selAll.checked = all.length>0 && checked.length===all.length;
+  const delBtn = document.getElementById('custInvDeleteSelected');
+  if(delBtn){
+    delBtn.disabled = checked.length===0;
+    delBtn.style.opacity = checked.length ? '1' : '.55';
+    delBtn.style.cursor = checked.length ? 'pointer' : 'not-allowed';
+    delBtn.textContent = (currentLang==='ar'?'🗑️ حذف المحدد':'🗑️ Seçilenleri Sil') + (checked.length ? ' ('+checked.length+')' : '');
+  }
+}
+
+// حذف فاتورة أو مجموعة فواتير من سجل العميل مع إعادة كمياتها إلى المستودع.
+// تتم العملية بعد تأكيد واحد، وتُحذف فقط الفواتير المحددة التابعة للعميل المفتوح.
+function deleteSelectedCustomerInvoices(){
+  var isAr = currentLang==='ar';
+  var checks = Array.from(document.querySelectorAll('#custHistBody .cust-inv-chk:checked'));
+  var invNos = Array.from(new Set(checks.map(function(c){ return c.getAttribute('data-inv')||''; }).filter(Boolean)));
+  if(!invNos.length){ showToast(isAr?'حدد فاتورة واحدة على الأقل':'En az bir fatura seçin','err'); return; }
+  var customer = _custHistCurrentName;
+  var valid = invNos.filter(function(no){
+    var rows = salesLog.filter(function(r){ return r.invNo===no; });
+    return rows.length && rows.every(function(r){ return r.customer===customer; });
+  });
+  if(!valid.length){ showToast(isAr?'لم يتم العثور على فواتير صالحة للحذف':'Silinecek geçerli fatura bulunamadı','err'); return; }
+  var totalRows = valid.reduce(function(n,no){ return n + salesLog.filter(function(r){return r.invNo===no;}).length; },0);
+  var msg = isAr
+    ? 'هل تريد حذف '+valid.length+' فاتورة للعميل '+customer+'؟\n'+valid.join('، ')+'\n\nسيتم إعادة كميات هذه الفواتير إلى مستودعاتها وحذفها من سجل المبيعات والحركات المرتبطة. لا يمكن التراجع عن العملية إلا باستعادة نسخة احتياطية.'
+    : customer+' müşterisinin '+valid.length+' faturası silinsin mi?\n'+valid.join(', ')+'\n\nBu faturaların miktarları ilgili depolara geri eklenecek ve satış/hareket kayıtları silinecek. İşlem yedek geri yüklenmeden geri alınamaz.';
+  if(!confirm(msg)) return;
+
+  valid.forEach(function(no){
+    _restoreStockForInvoice(no);
+    salesLog = salesLog.filter(function(r){ return r.invNo!==no; });
+    movements = movements.filter(function(m){
+      return !(m.notes===no && m.loc && m.loc.indexOf('Sale→')===0) && m.loc!==('InvoiceEdit→'+no);
+    });
+  });
+  saveAll();
+  renderCustomerStats();
+  renderCustomersList();
+  if(typeof renderSales==='function'){ try{ renderSales(); }catch(e){} }
+  openCustomerHistory(encodeURIComponent(customer));
+  showToast('🗑️ '+(isAr?'تم حذف':'Silindi')+' '+valid.length+' '+(isAr?'فاتورة وإعادة مخزون':'fatura, stok geri yüklendi'));
 }
 
 function submitCustomer(){
