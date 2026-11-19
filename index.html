@@ -4567,7 +4567,7 @@ var SCHEMA_VERSION = 5;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.26';
+var APP_VERSION = '20.32';
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -7600,6 +7600,39 @@ function norm(s){
     .toUpperCase();
 }
 
+// ترتيب موحّد للأسماء حسب لغة الواجهة (عربي/تركي)، مع تجاهل اختلاف حالة الأحرف والتشكيل وترتيب الأرقام طبيعياً.
+let _alphaNameCollator = null;
+let _alphaNameCollatorLang = '';
+function alphaNameCompare(a,b){
+  const lang = currentLang==='tr' ? 'tr' : 'ar';
+  if(!_alphaNameCollator || _alphaNameCollatorLang!==lang){
+    _alphaNameCollator = new Intl.Collator(lang,{usage:'sort',sensitivity:'base',numeric:true,ignorePunctuation:true});
+    _alphaNameCollatorLang = lang;
+  }
+  return _alphaNameCollator.compare(String(a??''),String(b??''));
+}
+// أسماء الأدوية غالباً تركية/لاتينية؛ يجب أن تبقى أبجديتها صحيحة
+// حتى عندما تكون لغة واجهة التطبيق عربية.
+const _productNameCollatorTR = new Intl.Collator('tr',{usage:'sort',sensitivity:'base',numeric:true,ignorePunctuation:true});
+const _productNameCollatorAR = new Intl.Collator('ar',{usage:'sort',sensitivity:'base',numeric:true,ignorePunctuation:true});
+function alphaProductCompare(a,b){
+  const sa=String(a??''), sb=String(b??'');
+  const arabic=/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+  const collator=(arabic.test(sa)||arabic.test(sb))?_productNameCollatorAR:_productNameCollatorTR;
+  return collator.compare(sa,sb);
+}
+// معيار موحّد لجرد المستودعات وتصديراته: اسم الدواء ثم العبوة،
+// ثم المستودع والمعرّف لكسر التعادل بصورة ثابتة دون تغيير بيانات المخزون.
+function alphaInventoryItemCompare(a,b){
+  return alphaProductCompare(a.name,b.name)
+    || alphaProductCompare(a.pkg,b.pkg)
+    || ((Number(a.dep)||0)-(Number(b.dep)||0))
+    || ((Number(a.id)||0)-(Number(b.id)||0));
+}
+function alphaInventoryGroupCompare(a,b){
+  return alphaProductCompare(a.name,b.name)||alphaProductCompare(a.pkg,b.pkg);
+}
+
 // ── NAVIGATION ────────────────────────────────
 // depHdr/depBdg now dynamic via warehouse objects
 function depHdrGrad(id){return getWarehouseGrad(id);}
@@ -8263,6 +8296,8 @@ function renderProductsPage(){
   let allList = db;
   if(q) allList = allList.filter(x=>norm(x.name).includes(q)||norm(x.pkg).includes(q));
   if(depF) allList = allList.filter(x=>x.dep===depF);
+  // عرض الأدوية أبجدياً دائماً، بما فيها الأدوية المضافة حديثاً.
+  allList = [...allList].sort((a,b)=>alphaProductCompare(a.name,b.name)||alphaProductCompare(a.pkg,b.pkg)||((a.dep||0)-(b.dep||0))||((a.id||0)-(b.id||0)));
 
   const available = allList.filter(x=>!(x.outOfStock||x.qty===0));
   const outOfStock = allList.filter(x=>x.outOfStock||x.qty===0);
@@ -8582,7 +8617,7 @@ function _visibleDb(){ return db.filter(_isVisibleProduct); }
 function renderWarehouse(dep){
   const wh=warehouses.find(x=>x.id===dep)||{icon:'🏭',headerGrad:'linear-gradient(to left,#37474F,#546E7A)',nameAr:'المستودع',nameTr:'Depo'};
   const grad=wh.headerGrad;
-  const list=db.filter(x=>x.dep===dep&&_isVisibleProduct(x)).sort((a,b)=>a.name.localeCompare(b.name));
+  const list=db.filter(x=>x.dep===dep&&_isVisibleProduct(x)).sort((a,b)=>alphaProductCompare(a.name,b.name)||alphaProductCompare(a.pkg,b.pkg)||((a.id||0)-(b.id||0)));
   const tq=list.reduce((s,x)=>s+x.qty,0);
   let pg=document.getElementById('page-w'+dep);
   if(!pg){
@@ -8951,7 +8986,7 @@ function openQtyEditor(dep){
   let rowsHTML='';
   if(dep==null){
     warehouses.forEach(w=>{
-      const wList=db.filter(x=>x.dep===w.id);
+      const wList=db.filter(x=>x.dep===w.id).slice().sort(alphaInventoryItemCompare);
       if(!wList.length)return;
       rowsHTML+=`<tr><td colspan="6" style="background:${w.headerGrad};color:#fff;font-weight:700;font-size:11px;padding:6px 12px">${w.icon} ${isAr?w.nameAr:w.nameTr}</td></tr>`;
       wList.forEach(x=>{rowsHTML+=qtyEditorRow(x,isAr,true);});
@@ -9152,6 +9187,8 @@ function renderAllTable(){
   _allTableFiltered = allFDep ? db.filter(x=>x.dep===allFDep&&_isVisibleProduct(x)) : _visibleDb();
   if(q) _allTableFiltered = _allTableFiltered.filter(x=>norm(x.name).includes(q)||norm(x.pkg).includes(q));
   if(getWhHideOut()) _allTableFiltered = _allTableFiltered.filter(x=>x.qty>0);
+  // فرز القائمة الكاملة بعد تطبيق جميع الفلاتر، حتى لا تبقى المنتجات الجديدة/المعدلة في نهاية ترتيب قاعدة البيانات.
+  _allTableFiltered.sort(alphaInventoryItemCompare);
   _allTablePage = 0;
   const isAr=currentLang==='ar';
   _updateAllHideOutBtn();
@@ -10406,7 +10443,7 @@ function renderMovements(){
       var detail=changes.map(function(c){
         var head='';if(Number(p.editCount)>1&&c.edit!==_lastEdit){_lastEdit=c.edit;head=`<tr><td colspan="3" style="padding:6px 5px;background:rgba(255,193,7,.16);font-weight:800;font-size:11px">✏️ ${ar?'التعديل':'Düzenleme'} ${h(c.edit||1)}${c.at?' · '+fmtDate(c.at):''}</td></tr>`;}
         var fromVal=c.field==='warehouse'?depN(c.from):c.from, toVal=c.field==='warehouse'?depN(c.to):c.to; var changeText=(c.field==='added')?(ar?'أُضيفت كمية':'eklendi'):(c.field==='removed')?(ar?'حُذفت كمية':'kaldırıldı'):(ar?'من':'önce')+' '+h(fromVal)+' '+(ar?'إلى':'→')+' '+h(toVal);
-        return head+`<tr><td style="text-align:start;padding:7px 5px;font-weight:700">${h(c.item||'—')}</td><td style="padding:7px 5px">${h(fieldLabel(c))}</td><td style="padding:7px 5px;color:#2e7d32;font-weight:700">${changeText}</td></tr>`;
+        return head+`<tr><td style="text-align:start;padding:7px 5px;font-weight:700">${c.item&&c.item!=='—'?`<strong class="mov-drug-link" data-drug="${h(c.item)}" onclick="showDrugMovHistory(this.dataset.drug)" style="cursor:pointer;color:var(--b7);text-decoration:underline">${h(c.item)}</strong>`:'—'}</td><td style="padding:7px 5px">${h(fieldLabel(c))}</td><td style="padding:7px 5px;color:#2e7d32;font-weight:700">${changeText}</td></tr>`;
       }).join('') || `<tr><td colspan="3" style="padding:8px;text-align:center;color:var(--gy5)">${ar?'تم حفظ تعديل بيانات الفاتورة دون تغيير كميات أو أسعار الأصناف':'Fatura bilgileri güncellendi; ürün miktarı/fiyatı değişmedi'}</td></tr>`;
       var customerLabel=(p.customerBefore&&p.customerBefore!==p.customerAfter)?h(p.customerBefore)+' ← ':'';
       return `<tr class="mov-invoice-edit"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(255,193,7,.09)"><span>✏️ ${ar?'تعديل فاتورة':'Fatura düzenleme'} ${h(p.invNo||String(e.m.loc||'').replace('InvoiceEdit→',''))}</span><span>${h(p.customerAfter||e.m.by||'')}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.m.date)}</span><span class="bdg ba">${changes.length} ${ar?'تغييرات':'değişiklik'}${Number(p.editCount)>1?' · '+h(p.editCount)+' '+(ar?'تعديلات':'düzenleme'):''}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><div style="font-size:12px;margin-bottom:7px;color:var(--gy6)">${ar?'الزبون: ':'Müşteri: '}${customerLabel}${h(p.customerAfter||e.m.by||'')}</div><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الحقل':'Alan'}</th><th>${ar?'التغيير':'Değişiklik'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
@@ -10415,7 +10452,7 @@ function renderMovements(){
     var items=e.items;
     var total=items.reduce(function(sum,x){return sum+(Number(x.m.qty)||0);},0);
     var ar=currentLang==='ar';
-    var detail=items.map(function(x){return `<tr><td style="text-align:start;padding:7px 5px">${h(x.m.name)}</td><td style="padding:7px 5px">${h(x.m.qty)}</td><td style="padding:7px 5px">${h((function(l){l=String(l||'');var i=l.lastIndexOf(' | ');return (i>=0?l.slice(i+3):l.replace(/^Sale→/,''))||'—';})(x.m.loc))}</td></tr>`;}).join('');
+    var detail=items.map(function(x){return `<tr><td style="text-align:start;padding:7px 5px"><strong class="mov-drug-link" data-drug="${h(x.m.name)}" onclick="showDrugMovHistory(this.dataset.drug)" style="cursor:pointer;color:var(--b7);text-decoration:underline">${h(x.m.name)}</strong></td><td style="padding:7px 5px">${h(x.m.qty)}</td><td style="padding:7px 5px">${h((function(l){l=String(l||'');var i=l.lastIndexOf(' | ');return (i>=0?l.slice(i+3):l.replace(/^Sale→/,''))||'—';})(x.m.loc))}</td></tr>`;}).join('');
     return `<tr class="mov-invoice-summary"><td colspan="7" style="padding:0;border-bottom:1px solid var(--gy2)"><details class="mov-invoice-group"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 9px;font-weight:700;background:rgba(46,125,50,.055)"><span>${ar?'🧾 فاتورة':'🧾 Fatura'} ${h(e.invNo)}</span><span>${h(e.customer)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--gy6)">${fmtDate(e.date)}</span><span class="bdg br">${ar?'إخراج':'Çıkış'} · ${items.length} ${ar?'أدوية':'ürün'} · ${h(total)}</span><span aria-hidden="true">⌄</span></summary><div style="padding:7px 10px 10px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:start">${ar?'الدواء':'Ürün'}</th><th>${ar?'الكمية':'Miktar'}</th><th>${ar?'الموقع':'Konum'}</th></tr></thead><tbody>${detail}</tbody></table></div></details></td></tr>`;
   }
   const body=document.getElementById('movBody');
@@ -10667,26 +10704,42 @@ function renderTransferLog(){
 }
 
 // ══════════════════════════════════════════════
-// 🏷️ لائحة الأسعار — دواء واحد بسطر واحد
+// 🏷️ لائحة الأسعار — دمج الدواء/العبوة عبر المستودعات
+// التجميع للعرض والتصدير فقط؛ لا يدمج أو يغيّر سجلات المخزون الأصلية.
 // ══════════════════════════════════════════════
+function priceListNormPart(value){
+  return String(value==null?'':value)
+    .normalize('NFKC')
+    .trim()
+    .replace(/\s+/g,' ')
+    .toLocaleUpperCase('tr-TR')
+    // اعتبار I و İ و ı اختلافات كتابية للحرف نفسه عند تجميع اسم المنتج.
+    .replace(/[İı]/g,'I');
+}
+function priceListGroupKey(x){
+  return priceListNormPart(x.name)+'|||'+priceListNormPart(x.pkg);
+}
+function buildPriceListGroups(){
+  const map=new Map();
+  db.forEach(x=>{
+    const key=priceListGroupKey(x);
+    if(!map.has(key)) map.set(key,{name:String(x.name||'').trim(),pkg:String(x.pkg||'').trim(),price:Number(x.price)||0,totalQty:0,totalVal:0,deps:new Map()});
+    const g=map.get(key);
+    const qty=Number(x.qty)||0, price=Number(x.price)||0;
+    g.totalQty+=qty;
+    g.totalVal+=qty*price;
+    g.deps.set(x.dep,(g.deps.get(x.dep)||0)+qty);
+    // الحفاظ على قاعدة السعر السابقة: أقل سعر موجب مسجل بين المستودعات.
+    if(price>0 && (g.price===0||price<g.price)) g.price=price;
+  });
+  return Array.from(map.values()).map(g=>({...g,deps:Array.from(g.deps,([dep,qty])=>({dep,qty}))}));
+}
 function renderPriceList(){filterPriceList();}
 function filterPriceList(){
   const q=norm(document.getElementById('plSearch')?.value||'');
-  const isAr=currentLang==='ar';
-  // Group by name+pkg (unique product regardless of warehouse)
-  const map={};
-  db.forEach(x=>{
-    const key=x.name+'|||'+x.pkg;
-    if(!map[key]) map[key]={name:x.name,pkg:x.pkg,price:x.price,totalQty:0,totalVal:0,deps:[]};
-    map[key].totalQty+=x.qty;
-    map[key].totalVal+=x.qty*x.price;
-    map[key].deps.push({dep:x.dep,qty:x.qty});
-    // Use highest non-zero price
-    if(x.price>0 && (map[key].price===0||x.price<map[key].price)) map[key].price=x.price;
-  });
-  let list=Object.values(map);
+  let list=buildPriceListGroups();
   if(q) list=list.filter(x=>norm(x.name).includes(q)||norm(x.pkg).includes(q));
-  list.sort((a,b)=>a.name.localeCompare(b.name));
+  list.sort((a,b)=>alphaNameCompare(a.name,b.name)||alphaNameCompare(a.pkg,b.pkg));
   const body=document.getElementById('plBody');
   if(!body) return;
   body.innerHTML=list.length ? list.map((x,i)=>{
@@ -10706,18 +10759,9 @@ function filterPriceList(){
 
 function exportPriceListExcel(){
   const isAr=currentLang==='ar';
-  const map={};
-  db.forEach(x=>{
-    const key=x.name+'|||'+x.pkg;
-    if(!map[key]) map[key]={name:x.name,pkg:x.pkg,price:x.price,totalQty:0,totalVal:0,deps:[]};
-    map[key].totalQty+=x.qty;
-    map[key].totalVal+=x.qty*x.price;
-    map[key].deps.push(depN(x.dep)+':'+x.qty);
-    if(x.price>0&&(map[key].price===0||x.price<map[key].price))map[key].price=x.price;
-  });
-  const list=Object.values(map).filter(x=>x.totalQty>0).sort((a,b)=>a.name.localeCompare(b.name));
+  const list=buildPriceListGroups().filter(x=>x.totalQty>0).sort((a,b)=>alphaNameCompare(a.name,b.name)||alphaNameCompare(a.pkg,b.pkg));
   const h=isAr?['#','الدواء','العبوة','السعر ₺','الكمية الإجمالية','القيمة الإجمالية ₺','المستودعات']:['#','İlaç','Ambalaj','Fiyat ₺','Toplam Stok','Toplam Değer ₺','Depolar'];
-  const rows=list.map((x,i)=>[i+1,x.name,x.pkg,x.price>0?x.price:'—',x.totalQty,x.totalVal,x.deps.join(' | ')]);
+  const rows=list.map((x,i)=>[i+1,x.name,x.pkg,x.price>0?x.price:'—',x.totalQty,x.totalVal,x.deps.map(d=>depN(d.dep)+':'+d.qty).join(' | ')]);
   dlXlsx(makeWb(h,rows,isAr?'لائحة الأسعار':'Fiyat Listesi'),`${isAr?'لائحة_الأسعار':'fiyat_listesi'}_${todayStr()}.xlsx`);
   showToast('📥');
 }
@@ -10835,10 +10879,10 @@ function renderStockReport(){
   let list=depF?db.filter(x=>x.dep===depF&&_isVisibleProduct(x)):_visibleDb();
   if(q) list=list.filter(x=>norm(x.name).includes(q)||norm(x.pkg).includes(q));
 
-  if(sort==='name') list.sort((a,b)=>a.name.localeCompare(b.name));
+  if(sort==='name') list.sort(alphaInventoryItemCompare);
   else if(sort==='qty_desc') list.sort((a,b)=>b.qty-a.qty);
   else if(sort==='qty_asc') list.sort((a,b)=>a.qty-b.qty);
-  else if(sort==='dep') list.sort((a,b)=>a.dep-b.dep||a.name.localeCompare(b.name));
+  else if(sort==='dep') list.sort(alphaInventoryItemCompare);
 
   const totalQty=list.reduce((s,x)=>s+x.qty,0);
 
@@ -11022,7 +11066,7 @@ function printStockReport(){
   const isAr=currentLang==='ar';
   const depF=parseInt(document.getElementById('rptDepFilter')?.value||0);
   let list=depF?db.filter(x=>x.dep===depF):db;
-  list.sort((a,b)=>a.dep-b.dep||a.name.localeCompare(b.name));
+  list.sort(alphaInventoryItemCompare);
   const now=new Date();
   const dateStr=`${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
   const timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -11134,7 +11178,7 @@ function exportReportExcel(){
   const isAr=currentLang==='ar';
   const depF=parseInt(document.getElementById('rptDepFilter')?.value||0);
   let list=(depF?db.filter(x=>x.dep===depF):db).filter(x=>x.qty>0);
-  list.sort((a,b)=>a.dep-b.dep||a.name.localeCompare(b.name));
+  list.sort(alphaInventoryItemCompare);
   const h=isAr?['#','الدواء','العبوة','المستودع','الكمية','الحالة']:['#','İlaç','Ambalaj','Depo','Miktar','Durum'];
   const rows=list.map((x,i)=>[i+1,x.name,x.pkg,depN(x.dep),x.qty,
     x.qty===0?(isAr?'نفد':'Tükendi'):x.qty<=5?(isAr?'منخفض':'Düşük'):(isAr?'جيد':'İyi')]);
@@ -11157,7 +11201,7 @@ function _buildFormattedSheet(depId,showPrice){
   const wh=warehouses.find(x=>x.id===depId)||{nameTr:(depId+'. Depo'),nameAr:('مستودع '+depId)};
   const sheetTitle=isAr?(wh.nameAr||wh.nameTr):(wh.nameTr||wh.nameAr)||(depId+'. Depo');
   const hdrColor=WH_COLORS[depId]||'1F4E79';
-  const list=db.filter(x=>x.dep===depId && x.qty>0).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+  const list=db.filter(x=>x.dep===depId && x.qty>0).sort(alphaInventoryItemCompare);
   const total=list.reduce((s,x)=>s+x.qty,0);
 
   const hdrStyle={
@@ -11267,12 +11311,12 @@ function _getCombinedStockGroups(){
     g.total+=(Number(x.qty)||0);
     if(!g.price&&x.price) g.price=x.price;
   });
-  return [...map.values()].filter(g=>g.total>0).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+  return [...map.values()].filter(g=>g.total>0).sort(alphaInventoryGroupCompare);
 }
 // قائمة الأدوية المنتهية (qty=0) عبر كل المستودعات — مبنية حيّاً من المخزون الحالي،
 // فتختفي تلقائياً بمجرد إضافة كمية جديدة لأي صنف منها (لا حاجة لأي تحديث يدوي).
 function _getOutOfStockItems(){
-  return db.filter(x=>Number(x.qty)===0).slice().sort((a,b)=>a.name.localeCompare(b.name,'tr')||a.pkg.localeCompare(b.pkg,'tr'));
+  return db.filter(x=>Number(x.qty)===0).slice().sort(alphaInventoryItemCompare);
 }
 function exportCombinedStockExcel(){
   _ensureXLSX(function(){
@@ -11318,7 +11362,7 @@ function _buildPDFHTML(depIds, title){
   depIds.forEach(depId=>{
     const wh=warehouses.find(x=>x.id===depId)||{nameAr:'المستودع',nameTr:'Depo',icon:'🏭',headerGrad:'linear-gradient(135deg,#1F4E79,#2E86C1)'};
     const whName=isAr?wh.nameAr:wh.nameTr;
-    const list=db.filter(x=>x.dep===depId && x.qty>0).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+    const list=db.filter(x=>x.dep===depId && x.qty>0).sort(alphaInventoryItemCompare);
     if(!list.length)return;
     const totalQty=list.reduce((s,x)=>s+x.qty,0);
     const totalVal=list.reduce((s,x)=>s+x.qty*(x.price||0),0);
@@ -12552,7 +12596,7 @@ function renderCustomersList(){
 
   if(q) list = list.filter(x=>norm(x.name).includes(q)||(x.phone||'').includes(q)||(x.nationalId||'').includes(q)||norm(x.region||'').includes(q));
   // سجل العملاء مرتب أبجدياً حسب الاسم، مع تجاهل اختلاف التشكيل وحالة الأحرف.
-  list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''), currentLang==='ar'?'ar':'tr', {sensitivity:'base', numeric:true}));
+  list.sort((a,b)=>alphaNameCompare(a.name,b.name));
 
   const th = document.getElementById('custTh');
   if(th) th.innerHTML = (isAr
@@ -12668,7 +12712,7 @@ function openCustomerHistory(encodedName){
         </div>
         <div style="padding:6px 0">
           ${inv.items.map(r=>`<div style="display:flex;justify-content:space-between;padding:4px 14px;font-size:11px;border-bottom:1px solid var(--gy1)">
-            <span><strong>${r.name}</strong> <span class="bdg bb2" style="font-size:9px">${r.pkg}</span></span>
+            <span><strong class="mov-drug-link" data-drug="${h(r.name)}" onclick="showDrugMovHistory(this.dataset.drug)" style="cursor:pointer;color:var(--b7);text-decoration:underline">${h(r.name)}</strong> <span class="bdg bb2" style="font-size:9px">${h(r.pkg)}</span></span>
             <span style="color:var(--gy5)">${r.qty} × ${numFmt(r.price)} ₺${r.disc?` (-${r.disc}%)`:''}</span>
             <span style="font-weight:700;color:var(--g8)">${numFmt(r.qty*r.price*(1-r.disc/100))} ₺</span>
           </div>`).join('')}
@@ -12677,7 +12721,7 @@ function openCustomerHistory(encodedName){
     ${rets.length ? `
       <div style="padding:12px 16px 4px;font-size:12px;font-weight:700;color:var(--rd)">${isAr?'↩️ المرتجعات':'↩️ İadeler'}</div>
       ${rets.map(r=>`<div style="margin:0 14px 8px;padding:8px 14px;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;font-size:11px;display:flex;gap:12px">
-        <span>${fmtDate(r.date)}</span><strong>${r.name}</strong><span class="bdg bb2" style="font-size:9px">${r.pkg}</span>
+        <span>${fmtDate(r.date)}</span><strong class="mov-drug-link" data-drug="${h(r.name)}" onclick="showDrugMovHistory(this.dataset.drug)" style="cursor:pointer;color:var(--b7);text-decoration:underline">${h(r.name)}</strong><span class="bdg bb2" style="font-size:9px">${h(r.pkg)}</span>
         <span style="color:var(--rd)">−${r.qty}</span><span style="color:var(--gy5)">${r.reason||'—'}</span>
       </div>`).join('')}` : ''}
     <div style="height:16px"></div>`;
@@ -14057,7 +14101,7 @@ function renderPurchaseLog() {
       '<td>'+fmtDate(p.date)+'</td>'+
       '<td style="font-weight:700;color:#1A237E">'+h(p.invNo)+'</td>'+
       '<td>'+(p.supplierName?'<span style="background:#E8EAF6;color:#1A237E;padding:2px 6px;border-radius:4px;font-size:11px">'+h(p.supplierName)+'</span>':'<span style="color:var(--gy5)">—</span>')+'</td>'+
-      '<td><strong>'+h(p.itemName)+'</strong></td>'+
+      '<td><strong class="mov-drug-link" data-drug="'+h(p.itemName)+'" onclick="showDrugMovHistory(this.dataset.drug)" style="cursor:pointer;color:var(--b7);text-decoration:underline">'+h(p.itemName)+'</strong></td>'+
       '<td style="font-size:11px;color:var(--gy5)">'+h(p.pkg)+'</td>'+
       '<td><span style="background:#E8F5E9;color:#1B5E20;padding:2px 6px;border-radius:4px;font-size:11px">'+h(getWarehouseName(p.dep))+'</span></td>'+
       '<td style="text-align:center;font-weight:700">'+p.qty+'</td>'+
