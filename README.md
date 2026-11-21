@@ -112,3 +112,6 @@ Invoice records now carry a crop and agricultural season. Season options are edi
 
 
 الإصدار V20.11: تم ضبط ترتيب الأدوية في سجل الحركات ليطابق ترتيبها في الفاتورة، دون بطاقات أو تجميع.
+
+### V20.38 — Product Lifetime History
+Use Reports → “التاريخ الكامل للدواء” to select a product/package, optionally filter dates, inspect its event timeline and warehouse balances, and export the report to Excel or PDF.

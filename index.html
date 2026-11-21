@@ -2280,6 +2280,7 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
       <button class="tb active" id="rtab-stock" onclick="setRptTab('stock')">📦 المخزون الكامل</button>
       <button class="tb" id="rtab-sales" onclick="setRptTab('sales')">💰 ملخص المبيعات</button>
       <button class="tb" id="rtab-movement" onclick="setRptTab('movement')">🔄 حركة المخزون</button>
+      <button class="tb" id="rtab-history" onclick="setRptTab('history')">📜 التاريخ الكامل للدواء</button>
     </div>
     <button class="btn bp bsm" onclick="printStockReport()" style="display:flex;align-items:center;gap:5px">🖨️ <span id="btn-print-lbl">طباعة التقرير</span></button>
     <button class="btn bxl bsm" onclick="exportReportExcel()">📥 Excel</button>
@@ -2359,6 +2360,29 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
         <span class="pt" style="color:#fff">😴 منتجات راكدة (لم تتحرك +30 يوم)</span>
       </div>
       <div class="tw" id="repStagnant"></div>
+    </div>
+  </div>
+
+  <!-- PRODUCT LIFETIME HISTORY -->
+  <div id="rpt-tab-history" style="display:none">
+    <div class="panel" style="margin-bottom:14px">
+      <div class="ph" style="background:linear-gradient(to left,#4A148C,#7B1FA2)"><span class="pt" style="color:#fff">📜 التاريخ الكامل للدواء</span></div>
+      <div class="pb">
+        <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(130px,1fr) minmax(130px,1fr);gap:10px;align-items:end">
+          <div class="fgr"><label>ابحث عن الدواء</label><input id="rpt-history-search" list="rpt-history-options" placeholder="اكتب اسم الدواء أو العبوة" oninput="filterDrugHistoryOptions()"><datalist id="rpt-history-options"></datalist></div>
+          <div class="fgr"><label>من تاريخ</label><input id="rpt-history-from" type="date"></div>
+          <div class="fgr"><label>إلى تاريخ</label><input id="rpt-history-to" type="date"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn bp" onclick="renderDrugLifetimeHistory()">🔍 عرض التاريخ</button>
+          <button class="btn bxl" onclick="exportDrugLifetimeExcel()">📊 تصدير Excel</button>
+          <button class="btn bs" onclick="printDrugLifetimePDF()">📄 تصدير PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="rpt-history-summary" class="sg" style="margin-bottom:14px"></div>
+    <div class="panel"><div class="ph"><span class="pt">📋 التسلسل الزمني لجميع العمليات</span><span id="rpt-history-count" style="font-size:11px"></span></div>
+      <div class="tw"><table style="min-width:900px"><thead><tr id="rpt-history-head"></tr></thead><tbody id="rpt-history-body"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--gy5)">اختر دواءً لعرض تاريخه</td></tr></tbody></table></div>
     </div>
   </div>
 
@@ -2748,7 +2772,9 @@ body.app-font-90{font-size:90%}body.app-font-110{font-size:110%}body.app-font-12
   <div class="panel">
     <div class="ph">
       <span class="pt"><span id="lbl-all-products" data-key="allProducts">📋 جميع المنتجات</span> (<span id="np-count">0</span>)</span>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn bs bsm" onclick="openProductMergeModal()">🔗 دمج دواء مع دواء آخر</button>
+        <button class="btn bs bsm" onclick="undoProductMerge()" id="btn-undo-product-merge">↶ التراجع عن آخر دمج</button>
         <select id="npDepF" onchange="renderProductsPage()" style="padding:5px 10px;border:1.5px solid var(--gy2);border-radius:7px;font-family:inherit;font-size:12px">
           <option value="0" id="npDepF-all" data-key="allWh">كل المستودعات</option>
           <option value="1" class="npDepF-opt">المستودع الأول</option>
@@ -4051,7 +4077,9 @@ let db = [
 
 let movements=[],salesLog=[],returnsLog=[],auditLog=[],invoiceRows=[],transferLog=[];
 let suppliers=[]; // {id,name,phone,contact,city,email,terms,notes,createdAt}
-let purchaseLog=[]; // {id,date,supplierId,supplierName,itemId,itemName,pkg,dep,qty,buyPrice,total,by,notes}
+let purchaseLog=[]; // purchase invoice lines
+let productMergeHistory=[]; // reversible product merges with complete pre-merge snapshots
+let customerPayments=[]; // {id,customerId,customer,date,amount,method,notes,createdAt}
 let customers=[]; // {id,name,phone,region,address,notes,createdAt}
 
 // ── Drug Types DB ─────────────────────────────
@@ -4423,19 +4451,16 @@ var IDB_BACKUP_EVERY = 10; // نسخة احتياطية كل 10 حفظات
 
 function _idbSave(json) {
   _idbBackupCounter++;
-  // حفظ رئيسي
-  var p = _idbPut('snap', 'main', json);
-  // نسخة احتياطية كل N حفظة
-  if (_idbBackupCounter % IDB_BACKUP_EVERY === 0) {
-    _idbPut('snap', 'backup', json);
-    // حفظ البيانات التعريفية
-    _idbPut('meta', 'lastSave', {
-      time: new Date().toISOString(),
-      count: _idbBackupCounter,
-      size: json.length
-    });
-  }
-  return p;
+  // احتفظ بآخر لقطة سليمة قبل استبدال الرئيسية، ثم اكتب الرئيسية الجديدة.
+  // هذا يجعل النسخة الاحتياطية حديثة دائماً ولا ينتظر عشر عمليات حفظ.
+  return _idbGet('snap','main').then(function(previous){
+    var backupWrite=previous ? _idbPut('snap','backup',previous) : Promise.resolve(true);
+    return backupWrite.catch(function(e){console.warn('IDB backup write failed:',e);return false;});
+  }).then(function(){
+    return _idbPut('snap','main',json);
+  }).then(function(ok){
+    return _idbPut('meta','lastSave',{time:new Date().toISOString(),count:_idbBackupCounter,size:json.length}).catch(function(){return false;}).then(function(){return ok;});
+  });
 }
 
 // ── تحميل مع fallback للنسخة الاحتياطية ──────
@@ -4560,14 +4585,32 @@ function _selfSave(json) {
 // إصدار مخطط البيانات — يُستخدم للكشف عن التعارض بين المصادر
 // زِد هذا الرقم عند تغيير بنية البيانات
 // ══════════════════════════════════════════════
-var SCHEMA_VERSION = 5;
+var SCHEMA_VERSION = 6;
 // رقم الإصدار النصي للتطبيق — يجب أن يطابق رقم "BEYDUN AGRO V<رقم>" في
 // CHANGELOG.md دائماً (مثال: BEYDUN AGRO V2 ⇒ APP_VERSION = '2').
 // عند كل تسليم جديد: حدّث هذا السطر + عنوان CHANGELOG.md معاً، ثم شغّل
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.33';
+var APP_VERSION = '20.38';
+
+// Product identity: one stable logical product across warehouses, without merging stock rows.
+function _productNormPart(v){
+  return String(v==null?'':v).normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('tr-TR');
+}
+function _productIdentityKey(name,pkg){ return _productNormPart(name)+'|'+_productNormPart(pkg); }
+function _productIdentityId(name,pkg){
+  // Encode the complete normalized key (not a short hash) to avoid identity hash collisions.
+  return 'PRD-'+encodeURIComponent(_productIdentityKey(name,pkg));
+}
+function _migrateProductIdentities(){
+  // Backfill stable product IDs. Stock rows (one per warehouse) remain separate and untouched.
+  (db||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.name,x.pkg);});
+  (salesLog||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.name,x.pkg);});
+  (returnsLog||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.name,x.pkg);});
+  (purchaseLog||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.itemName||x.name,x.pkg);});
+  (movements||[]).forEach(function(x){if(!x.productId&&x.name&&x.pkg)x.productId=_productIdentityId(x.name,x.pkg);});
+}
 
 function _buildSnap() {
   // جمع dosesDB و doseHistory بأمان حتى لو لم تُحمَّل بعد
@@ -4578,19 +4621,20 @@ function _buildSnap() {
   return {
     schemaVersion: SCHEMA_VERSION,
     db: db.map(function(x) {
-      var item = {id:x.id, name:x.name, pkg:x.pkg, dep:x.dep, qty:x.qty, price:x.price, custom:x.custom||false};
+      var item = {id:x.id, name:x.name, pkg:x.pkg, dep:x.dep, qty:x.qty, price:x.price, custom:x.custom||false, productId:x.productId||_productIdentityId(x.name,x.pkg)};
       if (x.expiry) item.expiry = x.expiry;
       return item;
     }),
     deletedIds: _deletedIds,
     movements: movements, salesLog: salesLog, returnsLog: returnsLog, auditLog: auditLog, transferLog: transferLog,
-    suppliers: suppliers, purchaseLog: purchaseLog, customers: customers,
+    suppliers: suppliers, purchaseLog: purchaseLog, customers: customers, customerPayments: customerPayments,
     drugTypesDB: drugTypesDB,
     dosesDB: _doses,
     doseHistory: _doseHist,
     warehouses: warehouses,
     invCounter: invCounter, currentLang: currentLang, showPriceInExport: showPriceInExport,
     backupSettings: _backupSettings,
+    productMergeHistory: productMergeHistory,
     savedAt: new Date().toISOString(),
     appVersion: APP_VERSION
   };
@@ -4631,8 +4675,15 @@ var _schemaMigrations = {
   // ── عند إضافة إصدار جديد (v5 مثلاً): ──
   // v4 → v5: IDB v3 — الجرعات والتاريخ انتقلت لـ IDB (لا ترقية بيانات مطلوبة هنا)
   5: function(s) {
-    // نضمن وجود حقل idbVersion كمرجع
     if (!s.idbVersion) s.idbVersion = 3;
+    return s;
+  },
+  6: function(s) {
+    if (!Array.isArray(s.customerPayments)) s.customerPayments = [];
+    (s.db||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.name,x.pkg);});
+    (s.salesLog||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.name,x.pkg);});
+    (s.returnsLog||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.name,x.pkg);});
+    (s.purchaseLog||[]).forEach(function(x){if(!x.productId)x.productId=_productIdentityId(x.itemName||x.name,x.pkg);});
     return s;
   },
 };
@@ -4666,7 +4717,7 @@ function _applySnap(s) {
   // ── حماية من فقدان البيانات: مقارنة تاريخ الحفظ ──
   var currentSavedAt = null;
   try {
-    var cur = JSON.parse(localStorage.getItem('agro_data') || '{}');
+    var cur = JSON.parse(localStorage.getItem(STORE_KEY) || localStorage.getItem('agro_data') || '{}');
     currentSavedAt = cur.savedAt || null;
   } catch(e) {}
   var backupSavedAt = s.savedAt || null;
@@ -4698,7 +4749,9 @@ function _applySnap(s) {
         dep:   saved.dep,
         qty:   saved.qty   != null ? saved.qty   : 0,
         price: saved.price != null ? saved.price : 0,
-        custom: saved.custom || false
+        custom: saved.custom || false,
+        productId: saved.productId || _productIdentityId(saved.name,saved.pkg),
+        expiry: saved.expiry || ''
       });
     });
   }
@@ -4708,6 +4761,7 @@ function _applySnap(s) {
   }
   if (s.deletedIds) _deletedIds = s.deletedIds;
   if (s.movements)  movements  = s.movements;
+  if (Array.isArray(s.productMergeHistory)) productMergeHistory = s.productMergeHistory;
   if (s.salesLog)   salesLog   = s.salesLog;
   if (s.returnsLog) returnsLog = s.returnsLog;
   if (s.auditLog)   auditLog   = s.auditLog;
@@ -4715,6 +4769,7 @@ function _applySnap(s) {
   if (s.suppliers)  suppliers  = s.suppliers;
   if (s.purchaseLog) purchaseLog = s.purchaseLog;
   if (s.customers)  customers  = s.customers;
+  if (Array.isArray(s.customerPayments)) customerPayments = s.customerPayments;
   if (s.drugTypesDB) drugTypesDB = s.drugTypesDB;
   // استعادة قاعدة بيانات الجرعات إن كانت مضمّنة في الملف
   // نستخدم window لتجنب مشكلة التعريف المتأخر لـ dosesDB
@@ -4835,17 +4890,16 @@ function embedSave() {
 function sanitizeQty(raw, opts) {
   opts = opts || {};
   var field = opts.field || 'الكمية';
-  // إزالة أي حرف غير رقمي (أحرف، رموز خاصة، نقاط عشرية)
-  var cleaned = String(raw == null ? '' : raw).replace(/[^0-9]/g, '');
-  if (cleaned === '') {
-    return { ok: false, val: 0,
-      err: (opts.strict
-        ? '⚠️ ' + field + ': أدخل رقماً صحيحاً (1 أو أكثر)'
-        : '⚠️ ' + field + ': أدخل رقماً صحيحاً') };
+  // قبول أرقام صحيحة فقط؛ لا نحذف الإشارات أو الفواصل لأن ذلك قد يحوّل -5 إلى 5 و1.5 إلى 15.
+  var cleaned = String(raw == null ? '' : raw).trim()
+    .replace(/[٠-٩]/g, function(d){ return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); })
+    .replace(/[۰-۹]/g, function(d){ return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); });
+  if (!/^\d+$/.test(cleaned)) {
+    return { ok: false, val: 0, err: '⚠️ ' + field + ': أدخل عدداً صحيحاً موجباً دون إشارات أو كسور أو أحرف' };
   }
-  var n = parseInt(cleaned, 10);
-  if (isNaN(n) || n < 0) {
-    return { ok: false, val: 0, err: '⚠️ ' + field + ': لا تُقبل القيم السالبة أو غير الرقمية' };
+  var n = Number(cleaned);
+  if (!Number.isSafeInteger(n) || n < 0) {
+    return { ok: false, val: 0, err: '⚠️ ' + field + ': القيمة غير صالحة أو أكبر من الحد الآمن' };
   }
   if (opts.strict && n < 1) {
     return { ok: false, val: 0, err: '⚠️ ' + field + ': يجب أن تكون ≥ 1' };
@@ -4869,16 +4923,26 @@ function sanitizeQty(raw, opts) {
 function sanitizePrice(raw, opts) {
   opts = opts || {};
   var field = opts.field || 'السعر';
-  // نقبل الأرقام والنقطة العشرية فقط
-  var cleaned = String(raw == null ? '' : raw).replace(/[^0-9.]/g, '');
-  // منع أكثر من نقطة عشرية واحدة
-  var parts = cleaned.split('.');
-  if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
-  if (cleaned === '' || cleaned === '.') {
-    return { ok: !opts.required, val: 0,
-      err: opts.required ? '⚠️ ' + field + ': مطلوب' : '' };
+  var cleaned = String(raw == null ? '' : raw).trim()
+    .replace(/[٠-٩]/g, function(d){ return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); })
+    .replace(/[۰-۹]/g, function(d){ return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); })
+    .replace(/[₺$€\s]/g, '');
+  if (cleaned.indexOf('-') !== -1 || cleaned.indexOf('+') !== -1 || /[^0-9.,]/.test(cleaned))
+    return { ok:false, val:0, err:'⚠️ ' + field + ': صيغة السعر غير صالحة' };
+  // الفاصلة التركية/العربية عشرية. عند وجود الفاصلة والنقطة نعتبر آخر فاصل هو العشري.
+  var lastComma=cleaned.lastIndexOf(','), lastDot=cleaned.lastIndexOf('.');
+  if(lastComma>-1 && lastDot>-1){
+    if(lastComma>lastDot) cleaned=cleaned.replace(/\./g,'').replace(',', '.');
+    else cleaned=cleaned.replace(/,/g,'');
+  } else if(lastComma>-1) {
+    if((cleaned.match(/,/g)||[]).length>1) return {ok:false,val:0,err:'⚠️ '+field+': استخدم فاصلة عشرية واحدة فقط'};
+    cleaned=cleaned.replace(',', '.');
   }
-  var n = parseFloat(cleaned);
+  if (!/^\d+(?:\.\d{1,4})?$/.test(cleaned)) {
+    if(cleaned==='' && !opts.required) return {ok:true,val:0,err:''};
+    return {ok:false,val:0,err:'⚠️ '+field+': أدخل رقماً صحيحاً أو عشرياً صالحاً'};
+  }
+  var n = Number(cleaned);
   if (isNaN(n) || n < 0) {
     return { ok: false, val: 0, err: '⚠️ ' + field + ': لا تُقبل القيم السالبة أو غير الرقمية' };
   }
@@ -5465,64 +5529,42 @@ document.addEventListener('DOMContentLoaded', _attachNumericGuards);
 // IDB هي قاعدة البيانات الرئيسية — localStorage كـ fallback سريع
 // الكتابة لـ localStorage تُحدَّد بمرة كل 30 ثانية لتقليل الضغط
 var _lsLastWrite = 0;
-var LS_WRITE_INTERVAL = 30000; // 30 ثانية
+var LS_WRITE_INTERVAL = 30000; // توافق قديم؛ الحفظ الفعلي يتم عند كل عملية
+var _saveQueue = Promise.resolve();
+var _saveRevision = 0;
 
 function saveAll() {
-  _dirty = false;
   if (_dirtyTimer) { clearTimeout(_dirtyTimer); _dirtyTimer = null; }
-  var _saveLayerErrors = 0;
+  var snap, json;
   try {
-    var snap = _buildSnap();
-    var json = JSON.stringify(snap);
-
-    // Layer 2: IDB — دائماً (الأساسي)
-    var idbP = _idbSave(json);
-    if (idbP && typeof idbP.catch === 'function') {
-      idbP.catch(function() { _saveLayerErrors++; });
-    }
-
-    // Layer 1: localStorage — فقط كل 30 ثانية
-    var now = Date.now();
-    if (now - _lsLastWrite > LS_WRITE_INTERVAL) {
-      try { localStorage.setItem(STORE_KEY, json); _lsLastWrite = now; } catch(e) {
-        _lsCleanup();
-        try { localStorage.setItem(STORE_KEY, json); _lsLastWrite = now; } catch(e2) {
-          _saveLayerErrors++;
-          console.warn('localStorage full, data only in IDB');
-          // تحذير مرئي عند امتلاء الذاكرة المحلية
-          var isArLS = (typeof currentLang !== 'undefined') ? currentLang === 'ar' : true;
-          if (typeof showToast === 'function') {
-            showToast(isArLS
-              ? '⚠️ ذاكرة المتصفح ممتلئة — البيانات محفوظة في IDB فقط'
-              : '⚠️ Tarayıcı depolama dolu — Veriler sadece IDB\'de',
-              'warn');
-          }
-        }
-      }
-    }
-
-    // Layer 3: File System API
-    if (_fileHandle) _selfSave(json);
-
-    _updateIndicator();
-
+    snap = _buildSnap();
+    json = JSON.stringify(snap);
   } catch(e) {
-    _saveLayerErrors += 2;
-    console.warn('saveAll critical error:', e);
-    var isArCrit = (typeof currentLang !== 'undefined') ? currentLang === 'ar' : true;
-    if (typeof showToast === 'function') {
-      showToast(isArCrit
-        ? '⛔ خطأ حرج في الحفظ — صدّر نسخة احتياطية فوراً!'
-        : '⛔ Kritik kayıt hatası — Hemen yedek alın!',
-        'err');
-    }
-    // تعيين مؤشر الحفظ بلون خطر
-    var elErr = document.getElementById('save-ind');
-    if (elErr) {
-      elErr.textContent = '⛔ ' + (isArCrit ? 'فشل الحفظ' : 'Kayıt Hatası');
-      elErr.style.background = 'rgba(185,28,28,.7)';
-    }
+    console.error('saveAll snapshot error:',e);
+    _dirty = true;
+    if(typeof showToast==='function') showToast(currentLang==='ar'?'⛔ تعذر تجهيز البيانات للحفظ':'⛔ Kayıt verisi hazırlanamadı','err');
+    return Promise.reject(e);
   }
+  // اكتب نسخة localStorage في كل عملية كطبقة استرداد سريعة، ثم انتظر تأكيد IndexedDB.
+  try { localStorage.setItem(STORE_KEY,json); _lsLastWrite=Date.now(); }
+  catch(e) { console.warn('localStorage fallback write failed:',e); }
+  var thisRevision=++_saveRevision;
+  _saveQueue=_saveQueue.catch(function(){return false;}).then(function(){return _idbSave(json);});
+  var savePromise=_saveQueue.then(function(){
+    if(thisRevision===_saveRevision) _dirty=false;
+    if(thisRevision===_saveRevision) _updateIndicator();
+    if(_fileHandle) return Promise.resolve(_selfSave(json)).catch(function(e){console.warn('File save failed:',e);});
+    return true;
+  }).catch(function(e){
+    _dirty=true;
+    console.error('IndexedDB save failed:',e);
+    var isArCrit=(typeof currentLang!=='undefined')?currentLang==='ar':true;
+    if(typeof showToast==='function') showToast(isArCrit?'⛔ فشل تأكيد الحفظ في قاعدة البيانات. صدّر نسخة احتياطية فوراً.':'⛔ Veritabanına kayıt doğrulanamadı. Hemen yedek alın.','err');
+    var elErr=document.getElementById('save-ind');
+    if(elErr){elErr.textContent='⛔ '+(isArCrit?'فشل الحفظ':'Kayıt Hatası');elErr.style.background='rgba(185,28,28,.7)';}
+    throw e;
+  });
+  return savePromise;
 }
 
 // تنظيف localStorage من البيانات القديمة غير الضرورية
@@ -5586,6 +5628,7 @@ function loadAll() {
         console.info('Beydun: upgrading schema from v'+s.schemaVersion+' to v'+SCHEMA_VERSION);
       }
       _applySnap(s);
+      _migrateProductIdentities();
     } catch(e) { console.warn('loadAll parse:', e); }
 
     // ── دمج التصنيفات المدمجة مع أي بيانات محفوظة ────────────────────
@@ -8384,7 +8427,7 @@ function submitNewProduct(){
     showToast(T('medAlreadyExists'),'err');return;
   }
   const newId = _maxId(db) + 1;
-  const newItem = {id:newId, name, pkg, dep, qty, price, custom:true};
+  const newItem = {id:newId, name, pkg, dep, qty, price, custom:true, productId:_productIdentityId(name,pkg)};
   db.push(newItem);
   addAudit(ACT.IN, name, pkg, dep, 0, qty, null, price, T('newProductAudit'),'User',T('newProductAudit'));
   saveAll();
@@ -8448,29 +8491,72 @@ function epmCheckDup(){
     simEl.style.display = 'none';
   }
 }
-function saveEditProduct(){
-  var id  = parseInt(document.getElementById('epm-id').value);
-  var nm  = document.getElementById('epm-name').value.trim().toUpperCase();
-  var pkg = document.getElementById('epm-pkg').value.trim();
-  var dep = parseInt(document.getElementById('epm-dep').value);
-  var expiry = document.getElementById('epm-expiry').value||'';
-  if(!nm||!pkg){ showToast(T('enterMedAndPkg'),'err'); return; }
-  var dup = db.find(function(x){ return x.id!==id && x.name===nm && x.pkg===pkg && x.dep===dep; });
-  if(dup){ showToast(T('medAlreadyExists'),'err'); return; }
-  var item = db.find(function(x){return x.id===id;});
-  if(!item) return;
-  var oldName=item.name, oldPkg=item.pkg, oldDep=item.dep;
-  item.name = nm;
-  item.pkg  = pkg;
-  item.dep  = dep;
-  item.expiry = expiry;
-  var note = 'Edit: '+oldName+' -> '+nm+(oldPkg!==pkg?' | pkg:'+oldPkg+'->'+pkg:'')+(oldDep!==dep?' | dep:'+oldDep+'->'+dep:'')+(expiry?' | exp:'+expiry:'');
-  addAudit('PRICE', nm, pkg, dep, item.qty, item.qty, item.price, item.price, 'User', note);
-  saveAll();
-  closeEditProductModal();
-  renderProductsPage();
-  showToast('✅ ' + nm);
+function _productSnapshot(){
+  return {db:JSON.parse(JSON.stringify(db)),salesLog:JSON.parse(JSON.stringify(salesLog)),returnsLog:JSON.parse(JSON.stringify(returnsLog)),movements:JSON.parse(JSON.stringify(movements)),purchaseLog:JSON.parse(JSON.stringify(purchaseLog)),auditLog:JSON.parse(JSON.stringify(auditLog)),transferLog:JSON.parse(JSON.stringify(transferLog)),drugTypesDB:JSON.parse(JSON.stringify(drugTypesDB||[]))};
 }
+function _productNormPack(v){
+  return String(v==null?'':v).normalize('NFKC').trim().toLocaleUpperCase('tr-TR').replace(/GRAM\b/g,'GR').replace(/GR\s*\.?/g,'GR').replace(/\bLT\.?\b/g,'L').replace(/LİTRE|LITRE/g,'L').replace(/\bKG\b/g,'KG').replace(/\s+/g,' ').replace(/(\d)\s+(GR|KG|ML|L)\b/g,'$1 $2');
+}
+function _sameProductIdentity(a,b){return _productNormPart(a.name)===_productNormPart(b.name)&&_productNormPack(a.pkg)===_productNormPack(b.pkg);}
+function _replaceProductRefs(oldIds, keeper, oldNames){
+  var ids=new Set(oldIds.map(String)), pid=keeper.productId||_productIdentityId(keeper.name,keeper.pkg);
+  [salesLog,returnsLog,purchaseLog,movements,transferLog].forEach(function(arr){(arr||[]).forEach(function(r){
+    var ref=String(r.productId||''); var name=String(r.name||r.itemName||'');
+    if(ids.has(ref)||oldNames.indexOf(name)>=0){r.productId=pid;if(r.name)r.name=keeper.name;if(r.itemName)r.itemName=keeper.name;if(r.pkg!=null)r.pkg=keeper.pkg;}
+  });});
+  (auditLog||[]).forEach(function(r){if(oldNames.indexOf(String(r.itemName||''))>=0){r.itemName=keeper.name;if(r.pkg!=null)r.pkg=keeper.pkg;r.productId=pid;}});
+}
+function _mergeProductRecords(sourceId, keeperId, allowDifferent){
+  var source=db.find(x=>x.id===Number(sourceId)), keeper=db.find(x=>x.id===Number(keeperId));
+  if(!source||!keeper||source.id===keeper.id)return false;
+  if(!allowDifferent&&!_sameProductIdentity(source,keeper))return false;
+  var snap=_productSnapshot(), oldNames=[source.name,keeper.name], sourcePid=source.productId||_productIdentityId(source.name,source.pkg), keeperPid=keeper.productId||_productIdentityId(keeper.name,keeper.pkg), oldIds=[sourcePid,keeperPid];
+  var sourceRows=db.filter(x=>(x.productId||_productIdentityId(x.name,x.pkg))===sourcePid), keeperRows=db.filter(x=>(x.productId||_productIdentityId(x.name,x.pkg))===keeperPid);
+  // Combine balances only within the same warehouse; never move stock between warehouses.
+  sourceRows.slice().forEach(function(sr){var kr=keeperRows.find(x=>Number(x.dep)===Number(sr.dep));if(kr){kr.qty=Number(kr.qty||0)+Number(sr.qty||0);if(!kr.expiry&&sr.expiry)kr.expiry=sr.expiry;db=db.filter(x=>x!==sr);}else{sr.name=keeper.name;sr.pkg=keeper.pkg;sr.productId=_productIdentityId(keeper.name,keeper.pkg);keeperRows.push(sr);}});
+  keeper.productId=_productIdentityId(keeper.name,keeper.pkg);
+  db.forEach(x=>{if((x.productId===sourcePid||x.productId===keeperPid)||x.id===keeper.id){x.name=keeper.name;x.pkg=keeper.pkg;x.productId=keeper.productId;}});
+  _replaceProductRefs(oldIds,keeper,oldNames);
+  if(Array.isArray(drugTypesDB)){drugTypesDB.forEach(function(t){if(Number(t.itemId)===Number(sourceId))t.itemId=Number(keeperId);});}
+  productMergeHistory.push({id:'PM-'+Date.now(),date:new Date().toISOString(),keeperId:Number(keeperId),sourceId:Number(sourceId),keeperName:keeper.name,sourceName:source.name,snapshot:snap});
+  addAudit('EDIT',keeper.name,keeper.pkg,keeper.dep,null,null,null,null,'User','PRODUCT_MERGE '+source.name+' → '+keeper.name+'; sourceId='+sourceId+'; keeperId='+keeperId);
+  saveAll();return true;
+}
+function saveEditProduct(){
+  var id=parseInt(document.getElementById('epm-id').value), nm=document.getElementById('epm-name').value.trim().toUpperCase(), pkg=document.getElementById('epm-pkg').value.trim(), dep=parseInt(document.getElementById('epm-dep').value), expiry=document.getElementById('epm-expiry').value||'';
+  if(!nm||!pkg){showToast(T('enterMedAndPkg'),'err');return;}
+  var item=db.find(x=>x.id===id);if(!item)return;
+  var oldName=item.name,oldPkg=item.pkg,oldDep=item.dep;
+  var proposed={name:nm,pkg:pkg};
+  var matches=db.filter(x=>x.id!==id&&_sameProductIdentity(x,proposed));
+  // Identity is global across warehouses. Same logical product is one identity, with warehouse stock rows.
+  item.name=nm;item.pkg=pkg;item.dep=dep;item.expiry=expiry;item.productId=_productIdentityId(nm,pkg);
+  if(matches.length){
+    var sameWarehouse=matches.find(x=>Number(x.dep)===Number(dep));
+    if(sameWarehouse){
+      if(!confirm('تم العثور على سجل مطابق في '+depN(dep)+'. سيتم دمج الكميتين مع الحفاظ على سجلات الفواتير والمبيعات. هل تريد المتابعة؟')){item.name=oldName;item.pkg=oldPkg;item.dep=oldDep;item.productId=_productIdentityId(oldName,oldPkg);return;}
+      // Merge the current edited row into the matching record, which becomes the canonical row.
+      item.name=nm;item.pkg=pkg;
+      if(!_mergeProductRecords(item.id,sameWarehouse.id,false)){showToast('تعذر إتمام الدمج','err');return;}
+    } else {
+      matches.forEach(x=>{x.name=nm;x.pkg=pkg;x.productId=item.productId;});
+    }
+  }
+  // Normalize all historical references for this logical identity; prices, dates and quantities are untouched.
+  var pid=_productIdentityId(nm,pkg);
+  [salesLog,returnsLog,purchaseLog,movements,transferLog].forEach(arr=>(arr||[]).forEach(r=>{if((r.productId&&[ _productIdentityId(oldName,oldPkg),pid].includes(r.productId))||((r.name===oldName||r.itemName===oldName)&&(!r.pkg||_productNormPack(r.pkg)===_productNormPack(oldPkg)))){r.productId=pid;if(r.name)r.name=nm;if(r.itemName)r.itemName=nm;if(r.pkg!=null)r.pkg=pkg;}}));
+  addAudit('PRICE',nm,pkg,dep,item.qty,item.qty,item.price,item.price,'User','Rename/pack correction: '+oldName+' '+oldPkg+' → '+nm+' '+pkg);
+  saveAll();closeEditProductModal();renderProductsPage();showToast('✅ تم توحيد بيانات الدواء');
+}
+function openProductMergeModal(){
+  var opts=db.slice().sort((a,b)=>alphaProductCompare(a.name,b.name)||alphaProductCompare(a.pkg,b.pkg)||a.dep-b.dep).map(x=>`<option value="${x.id}">${h(x.name)} — ${h(x.pkg)} | ${h(depN(x.dep))} | ${h(x.qty)} ${currentLang==='ar'?'كمية':'adet'}</option>`).join('');
+  var old=document.getElementById('productMergeModal');if(old)old.remove();var m=document.createElement('div');m.className='mo';m.id='productMergeModal';
+  m.innerHTML=`<div class="modal" style="max-width:520px"><div class="mh"><h3>🔗 دمج دواء مع دواء آخر</h3><button class="mc" onclick="document.getElementById('productMergeModal').remove()">✕</button></div><div class="mb"><p style="font-size:12px;color:var(--gy6)">اختر السجلين، ثم حدد الاسم والعبوة اللذين سيبقيان. المخزون يبقى مفصولاً حسب المستودع، وتُحفظ تفاصيل الفواتير التاريخية كما هي.</p><label>الدواء الأول</label><select id="pm-a" style="width:100%;padding:10px;margin:6px 0 12px">${opts}</select><label>الدواء الثاني</label><select id="pm-b" style="width:100%;padding:10px;margin:6px 0 12px">${opts}</select><label>الدواء الذي سيبقى</label><select id="pm-keep" style="width:100%;padding:10px;margin:6px 0 12px"><option value="a">الدواء الأول</option><option value="b">الدواء الثاني</option></select><div id="pm-summary" style="background:var(--g0);padding:10px;border-radius:8px;font-size:12px"></div></div><div class="mf"><button class="btn bs" onclick="document.getElementById('productMergeModal').remove()">إلغاء</button><button class="btn bp" onclick="confirmProductMerge()">تأكيد الدمج</button></div></div>`;
+  document.body.appendChild(m);['pm-a','pm-b','pm-keep'].forEach(id=>document.getElementById(id).addEventListener('change',updateProductMergeSummary));updateProductMergeSummary();
+}
+function updateProductMergeSummary(){var a=db.find(x=>x.id===Number(document.getElementById('pm-a')?.value)),b=db.find(x=>x.id===Number(document.getElementById('pm-b')?.value));var el=document.getElementById('pm-summary');if(!a||!b||!el)return;function stats(x){var pid=x.productId||_productIdentityId(x.name,x.pkg);return{qty:db.filter(y=>y.productId===pid||y.id===x.id).reduce((s,y)=>s+Number(y.qty||0),0),invoices:new Set(salesLog.filter(r=>r.productId===pid||r.name===x.name).map(r=>r.invNo)).size,sales:salesLog.filter(r=>r.productId===pid||r.name===x.name).length};}var sa=stats(a),sb=stats(b);el.textContent=`${a.name} ${a.pkg}: ${sa.qty} كمية، ${sa.invoices} فاتورة، ${sa.sales} عملية بيع. | ${b.name} ${b.pkg}: ${sb.qty} كمية، ${sb.invoices} فاتورة، ${sb.sales} عملية بيع.`;}
+function confirmProductMerge(){var a=Number(document.getElementById('pm-a').value),b=Number(document.getElementById('pm-b').value);if(a===b){showToast('اختر دواءين مختلفين','err');return;}var keep=document.getElementById('pm-keep').value==='a'?a:b,src=keep===a?b:a;var k=db.find(x=>x.id===keep),s=db.find(x=>x.id===src);if(!k||!s)return;var same=_sameProductIdentity(k,s);var msg=same?'سيتم دمج السجلين المتطابقين.':'⚠️ الاسم أو العبوة مختلفان. سيتم اعتماد اسم وعبوة الدواء المحتفظ به وربط التاريخين تحتهما. هل تؤكد؟';if(!confirm(msg+'\nلن تتغير أسعار الفواتير القديمة أو تواريخها أو كمياتها.'))return;if(!_mergeProductRecords(src,keep,true)){showToast('تعذر الدمج','err');return;}document.getElementById('productMergeModal').remove();renderProductsPage();showToast('✅ تم الدمج مع حفظ إمكانية التراجع');}
+function undoProductMerge(){var last=productMergeHistory[productMergeHistory.length-1];if(!last){showToast('لا يوجد دمج للتراجع عنه');return;}if(!confirm('سيتم إرجاع سجلات الأدوية والفواتير والحركات إلى حالتها قبل آخر دمج. هل تريد المتابعة؟'))return;var s=last.snapshot;db=s.db;salesLog=s.salesLog;returnsLog=s.returnsLog;movements=s.movements;purchaseLog=s.purchaseLog;auditLog=s.auditLog;transferLog=s.transferLog;drugTypesDB=s.drugTypesDB;productMergeHistory.pop();saveAll();renderProductsPage();showToast('↶ تم التراجع عن آخر دمج');}
 
 function deleteProduct(id){
   const item = db.find(x=>x.id===id);
@@ -9503,16 +9589,16 @@ function submitReturn(){
   // نحسب إجمالي ما بيع من هذا الصنف (اسم+عبوة+مستودع) لهذا العميل
   var _totalSoldToCustomer = salesLog
     .filter(function(s){
-      return s.name === item.name && s.pkg === item.pkg && s.dep === dep && s.customer === customer;
+      return s.name === item.name && s.pkg === item.pkg && s.dep === dep && s.customer === customer && (!invRef || String(s.invNo)===String(invRef));
     })
-    .reduce(function(acc, s){ return acc + s.qty; }, 0);
+    .reduce(function(acc, s){ return acc + (Number(s.qty)||0); }, 0);
 
-  // نطرح ما أُرجع سابقاً من نفس العميل لنفس الصنف
+  // المرتجعات المرتبطة بالفاتورة تخصم من حدها فقط؛ المرتجعات غير المرتبطة تخصم من الإجمالي العام.
   var _alreadyReturned = returnsLog
     .filter(function(r){
-      return r.itemId === pid && r.dep === dep && r.customer === customer;
+      return r.itemId === pid && r.dep === dep && r.customer === customer && (!invRef || !r.invRef || String(r.invRef)===String(invRef));
     })
-    .reduce(function(acc, r){ return acc + r.qty; }, 0);
+    .reduce(function(acc, r){ return acc + (Number(r.qty)||0); }, 0);
 
   var _maxReturnable = _totalSoldToCustomer - _alreadyReturned;
 
@@ -9528,21 +9614,21 @@ function submitReturn(){
         return;
       }
     } else {
-      // الفاتورة موجودة → تحقق أن هذا المنتج فيها
+      // إذا رُبط المرتجع بفاتورة موجودة، يجب أن تطابق العميل والمنتج والمستودع؛ لا نسمح بتجاوز ذلك بتأكيد تحذير.
       var _inInv = salesLog.some(function(s){
-        return s.invNo === invRef && s.name === item.name && s.pkg === item.pkg;
+        return String(s.invNo)===String(invRef) && s.customer===customer && s.name===item.name && s.pkg===item.pkg && Number(s.dep)===Number(dep);
       });
       if(!_inInv){
-        var _msg2 = currentLang==='ar'
-          ? 'تحذير: المنتج "' + item.name + '" غير موجود في الفاتورة ' + invRef + '.\nهل تريد المتابعة؟'
-          : 'Uyarı: "' + item.name + '" bu faturada yok (' + invRef + ').\nDevam etmek ister misiniz?';
-        if(!confirm(_msg2)) return;
+        showToast(currentLang==='ar'?'الفاتورة لا تخص هذا العميل أو لا تحتوي هذا الدواء في المستودع المحدد.':'Fatura bu müşteriye/ürüne/depo eşleşmesine ait değil.','err');
+        return;
       }
     }
   }
 
   // تحقق من الكمية المرتجعة مقابل ما بيع ──────────────────────────────────
   if(_maxReturnable <= 0){
+    // لا نتجاوز حد فاتورة محددة؛ السماح هنا قد يسبب تضخيم المخزون عند حذف/تعديل الفاتورة لاحقاً.
+    if(invRef && salesLog.some(function(s){return String(s.invNo)===String(invRef);})){showToast(currentLang==='ar'?'لا توجد كمية متبقية للإرجاع من هذه الفاتورة.':'Bu faturada iade edilebilir miktar kalmadı.','err');return;}
     // لم يُسجَّل أي بيع لهذا العميل لهذا الصنف
     var _warnNoSale = currentLang==='ar'
       ? 'تحذير: لا توجد مبيعات مسجّلة لـ "' + customer + '" من "' + item.name + '" في هذا المستودع.\n'
@@ -9570,7 +9656,8 @@ function submitReturn(){
   const before=item.qty;
   item.qty+=qty;
   if(item.outOfStock) item.outOfStock = false;
-  returnsLog.push({date:todayStr(),customer,itemId:pid,name:item.name,pkg:item.pkg,dep,qty,invRef,reason,
+  var _returnSale=salesLog.find(function(x){return invRef&&String(x.invNo)===String(invRef)&&x.name===item.name&&Number(x.dep)===Number(dep);})||salesLog.find(function(x){return x.customer===customer&&x.name===item.name&&x.pkg===item.pkg;});
+  returnsLog.push({date:todayStr(),customer,itemId:pid,productId:item.productId||_productIdentityId(item.name,item.pkg),name:item.name,pkg:item.pkg,dep,qty,unitPrice:_returnSale?Number(_returnSale.price)||0:0,disc:_returnSale?Number(_returnSale.disc)||0:0,invRef,reason,
                    maxWas:_maxReturnable, soldWas:_totalSoldToCustomer});
   movements.push({date:todayStr(),name:item.name,type:T('retType'),qty,loc:depN(dep),by:customer,notes:'↩️ '+customer});
   addAudit(ACT.RET,item.name,item.pkg,dep,before,item.qty,null,null,customer,`↩️ ${reason} | ${invRef||'—'}`);
@@ -10010,19 +10097,24 @@ function _confirmInvoiceCore(){
 
   const validRows=invoiceRows.filter(r=>r.name&&r.qty>0);
   if(!customer||!validRows.length){showToast(currentLang==='ar'?'⚠️ أدخل اسم العميل وأضف صنفاً واحداً على الأقل':'⚠️ Müşteri adı ve en az bir ürün giriniz','err');return;}
+  if(!String(invNo||'').trim()){showToast(currentLang==='ar'?'أدخل رقم الفاتورة':'Fatura numarası giriniz','err');return;}
+  if(salesLog.some(function(x){return String(x.invNo||'').trim().toLocaleUpperCase()===String(invNo).trim().toLocaleUpperCase();})){
+    showToast(currentLang==='ar'?'رقم الفاتورة مستخدم مسبقاً. اختر رقماً آخر.':'Bu fatura numarası zaten kullanılıyor. Başka bir numara seçin.','err');
+    document.getElementById('inv-no').focus();return;
+  }
 
   // ── التحقق من الكميات أولاً قبل أي خصم ──
   const errors=[];
-  validRows.forEach(r=>{
-    const rowDep=r.dep||1;
-    const {name,pkg}=_resolveInvRow(r);
-    const item=_findDbItem(name,pkg,rowDep);
-    if(!item){errors.push(`❌ ${name} (${pkg}) (${depN(rowDep)}): ${T('notInStock')}`);}
-    else {
-      // ── استخدام guardStock للتحقق ──
-      const gRes = guardStock(item, r.qty, currentLang==='ar'?'بيع':'Satış');
-      if (!gRes.ok) errors.push(gRes.err.replace('\n',' — '));
-    }
+  // اجمع الصفوف المتكررة للمنتج نفسه قبل التحقق؛ التحقق المنفصل لكل صف يسمح بتجاوز الرصيد.
+  const _invoiceDemand=new Map();
+  validRows.forEach(function(r){
+    const rowDep=r.dep||1; const resolved=_resolveInvRow(r); const item=_findDbItem(resolved.name,resolved.pkg,rowDep);
+    if(!item){errors.push(`❌ ${resolved.name} (${resolved.pkg}) (${depN(rowDep)}): ${T('notInStock')}`);return;}
+    var rec=_invoiceDemand.get(String(item.id))||{item:item,qty:0};rec.qty+=Number(r.qty)||0;_invoiceDemand.set(String(item.id),rec);
+  });
+  _invoiceDemand.forEach(function(rec){
+    const gRes=guardStock(rec.item,rec.qty,currentLang==='ar'?'بيع':'Satış');
+    if(!gRes.ok) errors.push(gRes.err.replace('\n',' — '));
   });
   if(errors.length){
     showToast(errors[0].split('\n')[0],'err');
@@ -10044,7 +10136,7 @@ function _confirmInvoiceCore(){
     addAudit(ACT.SALE,r.name,r.pkg,item.dep,before,item.qty,r.price,r.price,customer,`${invNo}|${region||'—'}|${r.disc}%`);
     var _tMeta=_invoiceTreatmentMeta(item,r,customer,date);
     var _invoiceNotes=document.getElementById('inv-notes')?.value||'';
-    salesLog.push({date,invNo,customer,region,invoiceNotes:_invoiceNotes,name:r.name,pkg:r.pkg,qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
+    salesLog.push({date,invNo,customer,region,invoiceNotes:_invoiceNotes,name:r.name,pkg:r.pkg,productId:item.productId||_productIdentityId(r.name,r.pkg),qty:r.qty,price:r.price,disc:r.disc,dep:item.dep,
       urefType:r.urefType||'',urefVal:r.urefVal||'',urefUnit:r.urefUnit||'',urefNote:r.urefNote||'',
       sprayReason:r.sprayReason||'',sprayUsageType:r.sprayUsageType||'',
       sprayArea:_tMeta.sprayArea,sprayDate:_tMeta.sprayDate,sprayInterval:r.sprayInterval||'',
@@ -10303,7 +10395,7 @@ function _movDirection(type){
 }
 function showDrugMovHistory(name){
   const isAr=currentLang==='ar';
-  let list=movements.filter(m=>m.name===name);
+  let _drug=db.find(x=>x.name===name); let _pid=_drug&&(_drug.productId||_productIdentityId(_drug.name,_drug.pkg)); let list=movements.filter(m=>m.name===name||(_pid&&m.productId===_pid));
   list=[...list].reverse();
   let inTotal=0,outTotal=0;
   list.forEach(m=>{const d=_movDirection(m.type);const q=Number(m.qty)||0;if(d==='in')inTotal+=q;else if(d==='out')outTotal+=q;});
@@ -10608,7 +10700,9 @@ function submitTransfer(){
   const fromDep=parseInt(document.getElementById('tr-from').value);
   const toDep=parseInt(document.getElementById('tr-to').value);
   const pid=parseInt(document.getElementById('tr-prod').value);
-  const qty=parseInt(document.getElementById('tr-qty').value)||0;
+  const _trQtyRes=sanitizeQty(document.getElementById('tr-qty').value,{strict:true,field:'الكمية'});
+  if(!_trQtyRes.ok){showToast(_trQtyRes.err,'err');document.getElementById('tr-qty').focus();return;}
+  const qty=_trQtyRes.val;
   const by=document.getElementById('tr-by').value.trim();
   const notes=document.getElementById('tr-notes').value.trim();
   const isAr=currentLang==='ar';
@@ -10618,6 +10712,8 @@ function submitTransfer(){
 
   const srcItem=db.find(x=>x.id===pid);
   if(!srcItem){showToast('❌','err');return;}
+  if(Number(srcItem.dep)!==Number(fromDep)){showToast(isAr?'الدواء المحدد لا يتبع المستودع المصدر المختار':'Seçilen ürün kaynak depoya ait değil','err');return;}
+  if(!warehouses.some(function(w){return Number(w.id)===Number(toDep); })){showToast(isAr?'المستودع الهدف غير صالح':'Hedef depo geçersiz','err');return;}
   if(srcItem.qty<qty){
     const msg=isAr?`❌ الكمية المطلوبة (${qty}) أكبر من المخزون (${srcItem.qty})`:`❌ Stok yetersiz: ${srcItem.qty}`;
     showToast(msg,'err');alert(msg);return;
@@ -10859,7 +10955,7 @@ function populateRptDepFilter(){
 
 function setRptTab(tab){
   currentRptTab=tab;
-  ['stock','sales','movement'].forEach(t=>{
+  ['stock','sales','movement','history'].forEach(t=>{
     const el=document.getElementById('rpt-tab-'+t);
     const btn=document.getElementById('rtab-'+t);
     if(el) el.style.display=t===tab?'':'none';
@@ -10868,6 +10964,7 @@ function setRptTab(tab){
   if(tab==='stock') renderStockReport();
   if(tab==='sales') renderSalesReport();
   if(tab==='movement') renderMovementReport();
+  if(tab==='history') populateDrugHistoryOptions();
 }
 
 function renderStockReport(){
@@ -11060,6 +11157,79 @@ function renderMovementReport(){
       <td style="font-size:10px;color:var(--p7)">${isAr?'لم يُبع خلال 30 يوم':'30 gündür satış yok'}</td>
     </tr>`).join('')}</tbody>
   </table>`:`<div style="text-align:center;padding:24px;color:var(--tl)">✅ ${isAr?'لا توجد منتجات راكدة':'Durağan ürün yok'}</div>`;
+}
+
+// ── Product lifetime history: reconstruct from primary logs without changing source records ──
+function _historyProductOptions(){
+  var map=new Map();(db||[]).forEach(function(x){var pid=x.productId||_productIdentityId(x.name,x.pkg);if(!map.has(pid))map.set(pid,{pid:pid,name:x.name,pkg:x.pkg});});
+  (salesLog||[]).concat(returnsLog||[],purchaseLog||[],movements||[]).forEach(function(x){var nm=x.name||x.itemName||'',pk=x.pkg||'',pid=x.productId||(nm&&pk?_productIdentityId(nm,pk):'');if(pid&&!map.has(pid))map.set(pid,{pid:pid,name:nm,pkg:pk});});
+  return Array.from(map.values()).sort(function(a,b){return alphaProductCompare(a.name,b.name)||alphaProductCompare(a.pkg,b.pkg);});
+}
+function populateDrugHistoryOptions(){var dl=document.getElementById('rpt-history-options');if(!dl)return;dl.innerHTML=_historyProductOptions().map(function(x){return '<option value="'+h(x.name+' — '+x.pkg)+'"></option>';}).join('');}
+function filterDrugHistoryOptions(){/* native datalist keeps the mobile UI lightweight */}
+function _historyResolveProduct(){
+  var raw=(document.getElementById('rpt-history-search')?.value||'').trim();if(!raw)return null;
+  var opts=_historyProductOptions(),exact=opts.find(function(x){return (x.name+' — '+x.pkg).toLocaleLowerCase('tr-TR')===raw.toLocaleLowerCase('tr-TR');});
+  if(exact)return exact;
+  var parts=raw.split(' — '),nm=parts[0].trim(),pk=(parts[1]||'').trim();
+  var candidates=opts.filter(function(x){return _productNormPart(x.name)===_productNormPart(nm)&&(!pk||_productNormPack(x.pkg)===_productNormPack(pk));});
+  return candidates.length===1?candidates[0]:null;
+}
+function _buildDrugLifetimeEvents(product){
+  var pid=product.pid,aliases=new Set(),aliasNames=new Set();
+  aliases.add(_productNormPart(product.name)+'|'+_productNormPack(product.pkg));aliasNames.add(_productNormPart(product.name));
+  (db||[]).forEach(function(x){if((x.productId||_productIdentityId(x.name,x.pkg))===pid){aliases.add(_productNormPart(x.name)+'|'+_productNormPack(x.pkg));aliasNames.add(_productNormPart(x.name));}});
+  function match(r,nm,pk){var rp=String(r.productId||'');if(rp&&rp===pid)return true;nm=nm||r.name||r.itemName||'';pk=pk||r.pkg||'';return !!nm&&(aliases.has(_productNormPart(nm)+'|'+_productNormPack(pk))||(!pk&&aliasNames.has(_productNormPart(nm))));}
+  var ev=[],seen=new Set();
+  function add(e){e.qty=Number(e.qty)||0;e.dep=Number(e.dep)||0;e.date=String(e.date||'');e._key=[e.date,e.type,e.invNo||'',e.customer||'',e.dep,e.qty,e.notes||''].join('|');if(!seen.has(e._key)){seen.add(e._key);ev.push(e);}}
+  (purchaseLog||[]).forEach(function(r){if(match(r,r.itemName,r.pkg))add({date:r.date,type:'شراء / إضافة من فاتورة شراء',qty:r.qty,sign:1,dep:r.dep,party:r.supplierName||'—',invNo:r.invNo||'',price:r.buyPrice,notes:r.notes||'',source:'purchase'});});
+  (salesLog||[]).forEach(function(r){if(match(r,r.name,r.pkg))add({date:r.date,type:'بيع',qty:r.qty,sign:-1,dep:r.dep,party:r.customer||'—',invNo:r.invNo||'',price:r.price,notes:r.invoiceNotes||'',source:'sale'});});
+  (returnsLog||[]).forEach(function(r){if(match(r,r.name,r.pkg))add({date:r.date,type:'مرتجع من عميل',qty:r.qty,sign:1,dep:r.dep,party:r.customer||'—',invNo:r.invRef||'',price:r.unitPrice,notes:r.reason||'',source:'return'});});
+  // Movements fill operations not represented by sales/purchase/return ledgers (manual in/out, transfers, adjustments).
+  (movements||[]).forEach(function(r){if(!match(r,r.name,r.pkg))return;var t=String(r.type||''),loc=String(r.loc||''),note=String(r.notes||'');
+    var isSale=/Sale→|بيع|Çıkış/i.test(loc+' '+t),isPurchase=/شراء|Alım/i.test(t),isReturn=/مرتجع|İade/i.test(t);
+    if(isSale||isPurchase||isReturn){var duplicate=ev.some(function(e){return e.date===String(r.date||'')&&e.qty===Number(r.qty||0)&&((isSale&&e.source==='sale')||(isPurchase&&e.source==='purchase')||(isReturn&&e.source==='return'))&&(!r.notes||!e.invNo||String(e.invNo)===String(r.notes));});if(duplicate)return;}
+    var sign=/إخراج|سحب|Çıkış|نقل صادر/i.test(t+' '+loc)?-1:/إدخال|إضافة|شراء|Alım|مرتجع|İade|نقل وارد/i.test(t+' '+loc)?1:0;
+    if(!sign&&/Transfer|تحويل|نقل/i.test(t+' '+loc))sign=/إلى|→|to/i.test(loc)?1:-1;
+    if(!sign)return;
+    var dep=r.dep||0;if(!dep){var w=warehouses.find(function(x){return loc.indexOf(x.nameAr)>=0||loc.indexOf(x.nameTr)>=0;});if(w)dep=w.id;}
+    add({date:r.date,type:t||'حركة مخزون',qty:r.qty,sign:sign,dep:dep,party:r.by||'—',invNo:/Sale→/.test(loc)?note:'',price:null,notes:note,source:'movement'});
+  });
+  (auditLog||[]).forEach(function(r){if(!match(r,r.itemName,r.pkg))return;add({date:r.date,type:'تعديل / تسوية مخزون',qty:Math.abs(Number(r.qtyDelta)||0),sign:(Number(r.qtyDelta)||0)>=0?1:-1,dep:r.dep,party:r.by||'—',invNo:'',price:null,notes:r.notes||((r.qtyBefore??'')+' → '+(r.qtyAfter??'')),source:'audit'});});
+  ev.sort(function(a,b){var da=Date.parse(a.date)||0,dbb=Date.parse(b.date)||0;return da-dbb;});
+  // Compute opening balance backwards from current stock; per-warehouse balances stay separate.
+  var current={};(db||[]).forEach(function(x){if((x.productId||_productIdentityId(x.name,x.pkg))===pid)current[x.dep]=(current[x.dep]||0)+Number(x.qty||0);});
+  var net={};ev.forEach(function(e){if(e.dep)net[e.dep]=(net[e.dep]||0)+e.sign*e.qty;});
+  var opening={};Object.keys(current).concat(Object.keys(net)).forEach(function(k){if(opening[k]===undefined)opening[k]=(current[k]||0)-(net[k]||0);});
+  var running=Object.assign({},opening);ev.forEach(function(e){if(!e.dep){e.balance=null;return;}running[e.dep]=(running[e.dep]||0)+e.sign*e.qty;e.balance=running[e.dep];});
+  return {events:ev,current:current,opening:opening};
+}
+function renderDrugLifetimeHistory(){
+  var p=_historyResolveProduct();if(!p){showToast('اختر دواءً محدداً بالاسم والعبوة من نتائج البحث','err');return;}
+  var data=_buildDrugLifetimeEvents(p),from=document.getElementById('rpt-history-from')?.value||'',to=document.getElementById('rpt-history-to')?.value||'';
+  var events=data.events.filter(function(e){var d=e.date.slice(0,10);return (!from||d>=from)&&(!to||d<=to);});window._activeDrugHistory={product:p,data:data,events:events,from:from,to:to};
+  var totalSales=events.filter(e=>e.source==='sale').reduce((s,e)=>s+e.qty,0),totalReturns=events.filter(e=>e.source==='return').reduce((s,e)=>s+e.qty,0),totalPurch=events.filter(e=>e.source==='purchase').reduce((s,e)=>s+e.qty,0),totalCurrent=Object.values(data.current).reduce((s,n)=>s+n,0),isAr=currentLang==='ar';
+  document.getElementById('rpt-history-summary').innerHTML=[['📦',totalCurrent,isAr?'المخزون الحالي':'Current stock'],['🛒',totalPurch,isAr?'المشتريات المسجلة':'Purchases'],['💰',totalSales,isAr?'المبيعات المسجلة':'Sales'],['↩️',totalReturns,isAr?'المرتجعات المسجلة':'Returns']].map(function(x){return '<div class="sc blue"><div class="si b">'+x[0]+'</div><div class="si-info"><h3>'+Number(x[1]).toLocaleString()+'</h3><p>'+x[2]+'</p></div></div>';}).join('');
+  var heads=['#','التاريخ','نوع العملية','العميل / المورد / المسؤول','المستودع','الكمية','الرصيد بعد الحركة','رقم الفاتورة','السعر / الملاحظات'];document.getElementById('rpt-history-head').innerHTML=heads.map(x=>'<th>'+x+'</th>').join('');
+  document.getElementById('rpt-history-count').textContent=events.length+' عملية';
+  document.getElementById('rpt-history-body').innerHTML=events.length?events.map(function(e,i){return '<tr><td>'+(i+1)+'</td><td>'+h(e.date)+'</td><td><strong>'+h(e.type)+'</strong></td><td>'+h(e.party||'—')+'</td><td>'+h(e.dep?depN(e.dep):'غير محدد')+'</td><td style="color:'+(e.sign>0?'#2E7D32':'#C62828')+';font-weight:800">'+(e.sign>0?'+':'−')+e.qty+'</td><td><strong>'+(e.balance==null?'—':e.balance)+'</strong></td><td>'+h(e.invNo||'—')+'</td><td>'+(e.price!=null?numFmt(e.price)+' ₺ · ':'')+h(e.notes||'—')+'</td></tr>';}).join(''):'<tr><td colspan="9" style="text-align:center;padding:24px">لا توجد عمليات مسجلة ضمن الفترة المحددة</td></tr>';
+}
+function exportDrugLifetimeExcel(){
+  var a=window._activeDrugHistory;if(!a){renderDrugLifetimeHistory();a=window._activeDrugHistory;}if(!a)return;
+  _ensureXLSX(function(){var isAr=currentLang==='ar',wb=XLSX.utils.book_new(),p=a.product;
+    var summary=[[isAr?'الدواء':'Product',p.name],[isAr?'العبوة':'Package',p.pkg],[isAr?'إجمالي المخزون الحالي':'Current stock',Object.values(a.data.current).reduce((s,n)=>s+n,0)]];
+    var wh=[['المستودع','الرصيد الحالي'],...Object.keys(a.data.current).map(k=>[depN(Number(k)),a.data.current[k]])];
+    var headers=['التاريخ','نوع العملية','العميل / المورد / المسؤول','المستودع','داخل (+) / خارج (-)','الرصيد بعد الحركة','رقم الفاتورة','السعر','ملاحظات'];
+    var rows=a.events.map(e=>[e.date,e.type,e.party||'',e.dep?depN(e.dep):'غير محدد',e.sign*e.qty,e.balance==null?'':e.balance,e.invNo||'',e.price==null?'':e.price,e.notes||'']);
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'ملخص الدواء');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(wh),'المخزون حسب المستودع');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([headers,...rows]),'التاريخ الزمني');
+    dlXlsx(wb,'تاريخ_'+p.name.replace(/[^\w\u0600-\u06FF-]/g,'_')+'_'+todayStr()+'.xlsx');
+  });
+}
+function printDrugLifetimePDF(){
+  var a=window._activeDrugHistory;if(!a){renderDrugLifetimeHistory();a=window._activeDrugHistory;}if(!a)return;
+  var p=a.product,rows=a.events.map(function(e,i){return '<tr><td>'+(i+1)+'</td><td>'+h(e.date)+'</td><td>'+h(e.type)+'</td><td>'+h(e.party||'—')+'</td><td>'+h(e.dep?depN(e.dep):'غير محدد')+'</td><td>'+(e.sign>0?'+':'−')+e.qty+'</td><td>'+(e.balance==null?'—':e.balance)+'</td><td>'+h(e.invNo||'—')+'</td><td>'+h((e.price!=null?numFmt(e.price)+' ₺ ':'')+(e.notes||''))+'</td></tr>';}).join('');
+  var w=window.open('','_blank');if(!w){showToast('اسمح بالنوافذ المنبثقة لتصدير PDF','err');return;}
+  w.document.write('<!doctype html><html lang="ar"><meta charset="utf-8"><title>تاريخ الدواء</title><style>body{font-family:Arial,sans-serif;direction:rtl;padding:18px;color:#222}h1{color:#1B5E20}table{border-collapse:collapse;width:100%;font-size:10px}th{background:#1B5E20;color:white}td,th{border:1px solid #bbb;padding:6px;text-align:right}tr:nth-child(even){background:#f5f5f5}@media print{button{display:none}}</style><h1>BAYDOUN AGRO — التاريخ الكامل للدواء</h1><h3>'+h(p.name)+' — '+h(p.pkg)+'</h3><p>الرصيد الحالي: '+Object.values(a.data.current).reduce((s,n)=>s+n,0)+' | عدد العمليات: '+a.events.length+'</p><table><thead><tr><th>#</th><th>التاريخ</th><th>العملية</th><th>العميل / المورد</th><th>المستودع</th><th>الكمية</th><th>الرصيد</th><th>الفاتورة</th><th>السعر / الملاحظات</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.onload=function(){window.print()}<\/script></html>');w.document.close();
 }
 
 function printStockReport(){
@@ -12349,7 +12519,7 @@ function renderSuppliersList(){
       </td>
     </tr>`;
   }).join('')
-  : `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gy5)">${isAr?'لا يوجد موردون بعد — أضف أول مورد من الأعلى':'Henüz tedarikçi yok'}</td></tr>`;
+  : `<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--gy5)">${isAr?'لا يوجد موردون بعد — أضف أول مورد من الأعلى':'Henüz tedarikçi yok'}</td></tr>`;
 }
 
 function submitSupplier(){
@@ -12588,9 +12758,10 @@ function renderCustomersList(){
     const rets  = (_rByCust.get(name)||[]).filter(r=>r.customer===name);
     const totalBought = sales.reduce((s,r)=>s+r.qty*r.price*(1-r.disc/100),0);
     const totalRet    = rets.reduce((s,r)=>s+r.qty,0);
+    const account=_customerAccountTotals(name);
     const lastDate    = sales.length ? sales.sort((a,b)=>b.date.localeCompare(a.date))[0].date : '—';
     const invoices    = [...new Set(sales.map(r=>r.invNo))].length;
-    return { name, reg, totalBought, totalRet, lastDate, invoices,
+    return { name, reg, totalBought, totalRet, balance:account.balance, lastDate, invoices,
       phone: reg?.phone||'—', nationalId:reg?.nationalId||reg?.nationalID||'', area:reg?.area||reg?.landArea||0, region: reg?.region || (sales[0]?.region||'—'), notes: reg?.notes||'' };
   });
 
@@ -12600,8 +12771,8 @@ function renderCustomersList(){
 
   const th = document.getElementById('custTh');
   if(th) th.innerHTML = (isAr
-    ? ['#','اسم العميل','الهاتف','المنطقة','الفواتير','إجمالي المشتريات ₺','المرتجعات','آخر صفقة','إجراء']
-    : ['#','Müşteri','Telefon','Bölge','Fatura','Toplam Alım ₺','İade','Son İşlem','İşlem']
+    ? ['#','اسم العميل','الهاتف','المنطقة','الفواتير','إجمالي المشتريات ₺','الرصيد المستحق ₺','المرتجعات','آخر صفقة','إجراء']
+    : ['#','Müşteri','Telefon','Bölge','Fatura','Toplam Alım ₺','Bakiye ₺','İade','Son İşlem','İşlem']
   ).map(h=>`<th style="color:#fff">${h}</th>`).join('');
 
   const count = document.getElementById('cust-count');
@@ -12621,6 +12792,7 @@ function renderCustomersList(){
     <td><span class="bdg ba">${h(c.region)}</span></td>
     <td style="text-align:center"><strong>${h(c.invoices)}</strong></td>
     <td style="font-weight:700;color:var(--g8)">${numFmt(c.totalBought)} ₺</td>
+    <td style="font-weight:700;color:${c.balance>0?'var(--rd)':'var(--g8)'}">${numFmt(c.balance)} ₺</td>
     <td style="text-align:center;color:${c.totalRet>0?'var(--rd)':'var(--gy5)'}">${c.totalRet||'—'}</td>
     <td style="font-size:11px;color:var(--gy5)">${c.lastDate!=='—'?fmtDate(c.lastDate):'—'}</td>
     <td>
@@ -12690,6 +12862,23 @@ function openCustomerHistory(encodedName){
       ${reg.notes?`<span>📝 ${reg.notes}</span>`:''}
       <span style="color:var(--gy5)">${isAr?'عميل منذ':'Kayıt'}: ${fmtDate(reg.createdAt||'—')}</span>
     </div>` : ''}
+    <!-- Customer account / payment ledger -->
+    <div style="margin:12px 14px;padding:12px;border:1px solid var(--gy2);border-radius:9px;background:#f8fafc">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center">
+        <strong>💳 ${isAr?'الحساب المالي للعميل':'Müşteri Hesabı'}</strong>
+        <span style="font-weight:800;color:var(--rd)">${isAr?'الرصيد المستحق':'Borç'}: <span id="custAccountBalance">—</span> ₺</span>
+      </div>
+      <div style="font-size:11px;color:var(--gy6);margin:5px 0 9px">${isAr?'الرصيد = صافي الفواتير بعد المرتجعات − الدفعات المسجلة':'Bakiye = iadeler sonrası faturalar − kayıtlı ödemeler'}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px">
+        <input id="custPayAmount" type="number" min="0.01" step="0.01" placeholder="${isAr?'مبلغ الدفعة ₺':'Ödeme tutarı ₺'}" style="min-width:0;padding:8px;border:1px solid var(--gy3);border-radius:6px">
+        <input id="custPayDate" type="date" value="${todayStr()}" style="min-width:0;padding:8px;border:1px solid var(--gy3);border-radius:6px">
+        <select id="custPayMethod" style="min-width:0;padding:8px;border:1px solid var(--gy3);border-radius:6px"><option value="cash">${isAr?'نقداً':'Nakit'}</option><option value="transfer">${isAr?'تحويل':'Havale'}</option><option value="card">${isAr?'بطاقة':'Kart'}</option><option value="other">${isAr?'أخرى':'Diğer'}</option></select>
+        <input id="custPayNotes" placeholder="${isAr?'ملاحظات':'Notlar'}" style="min-width:0;padding:8px;border:1px solid var(--gy3);border-radius:6px">
+        <button class="btn bp" onclick="recordCustomerPayment()">${isAr?'➕ تسجيل دفعة':'➕ Ödeme kaydet'}</button>
+        <button class="btn bs" onclick="exportCustomerStatement(_custHistCurrentName)">${isAr?'📥 كشف حساب Excel':'📥 Hesap ekstresi Excel'}</button>
+      </div>
+      <div id="custPaymentHistory" style="margin-top:9px"></div>
+    </div>
     <!-- Invoices history -->
     <div style="padding:12px 16px 4px;font-size:12px;font-weight:700;color:var(--gy7);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <span>${isAr?'📜 سجل الفواتير':'📜 Fatura Geçmişi'}</span>
@@ -12730,6 +12919,48 @@ function openCustomerHistory(encodedName){
     <div style="height:16px"></div>`;
 
   document.getElementById('custHistModal').classList.remove('hidden');
+  renderCustomerAccount(name);
+}
+
+function _customerReturnValue(customer){
+  return (returnsLog||[]).filter(function(r){return r.customer===customer;}).reduce(function(sum,r){
+    var matched=salesLog.find(function(s){return r.invRef&&String(s.invNo)===String(r.invRef)&&s.name===r.name&&Number(s.dep)===Number(r.dep);}) || salesLog.find(function(s){return s.customer===customer&&s.name===r.name&&s.pkg===r.pkg;});
+    var price=Number(r.unitPrice!=null?r.unitPrice:(matched?matched.price:0));var disc=Number(r.disc!=null?r.disc:(matched?matched.disc:0));return sum+Number(r.qty||0)*price*(1-disc/100);
+  },0);
+}
+function _customerAccountTotals(customer){
+  var sold=salesLog.filter(function(r){return r.customer===customer;}).reduce(function(a,r){return a+Number(r.qty||0)*Number(r.price||0)*(1-Number(r.disc||0)/100);},0);
+  var returned=_customerReturnValue(customer);
+  var paid=(customerPayments||[]).filter(function(p){return p.customer===customer;}).reduce(function(a,p){return a+Number(p.amount||0);},0);
+  return {sold:sold,returned:returned,paid:paid,balance:sold-returned-paid};
+}
+function renderCustomerAccount(customer){
+  var t=_customerAccountTotals(customer),bal=document.getElementById('custAccountBalance'),hist=document.getElementById('custPaymentHistory');
+  if(bal){bal.textContent=numFmt(t.balance);bal.style.color=t.balance>0?'var(--rd)':(t.balance<0?'var(--b7)':'var(--g8)');}
+  if(hist){var rows=(customerPayments||[]).filter(function(p){return p.customer===customer;}).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+    hist.innerHTML='<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin-bottom:7px"><span>'+ (currentLang==='ar'?'الفواتير: ':'Faturalar: ')+numFmt(t.sold)+' ₺</span><span>'+ (currentLang==='ar'?'المرتجعات: ':'İadeler: ')+numFmt(t.returned)+' ₺</span><span>'+ (currentLang==='ar'?'المدفوع: ':'Ödenen: ')+numFmt(t.paid)+' ₺</span></div>'+
+      (rows.length?rows.map(function(p){return '<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 2px;border-top:1px solid var(--gy2);font-size:11px"><span>'+fmtDate(p.date)+' · '+h(p.method||'cash')+' · '+h(p.notes||'')+'</span><strong style="color:var(--g8)">'+numFmt(p.amount)+' ₺</strong></div>';}).join(''):'<div style="font-size:11px;color:var(--gy5)">'+(currentLang==='ar'?'لا توجد دفعات مسجلة':'Henüz ödeme yok')+'</div>');
+  }
+}
+function exportCustomerStatement(customer){
+  var events=[];
+  salesLog.filter(function(r){return r.customer===customer;}).forEach(function(r){events.push({date:r.date,type:currentLang==='ar'?'فاتورة بيع':'Satış faturası',ref:r.invNo,detail:r.name+' '+r.pkg, debit:Number(r.qty||0)*Number(r.price||0)*(1-Number(r.disc||0)/100),credit:0});});
+  returnsLog.filter(function(r){return r.customer===customer;}).forEach(function(r){var match=salesLog.find(function(x){return r.invRef&&String(x.invNo)===String(r.invRef)&&x.name===r.name&&Number(x.dep)===Number(r.dep);});var price=Number(r.unitPrice!=null?r.unitPrice:(match?match.price:0));var disc=Number(r.disc!=null?r.disc:(match?match.disc:0));events.push({date:r.date,type:currentLang==='ar'?'مرتجع':'İade',ref:r.invRef||'',detail:r.name+' '+r.pkg, debit:0,credit:Number(r.qty||0)*price*(1-disc/100)});});
+  (customerPayments||[]).filter(function(p){return p.customer===customer;}).forEach(function(p){events.push({date:p.date,type:currentLang==='ar'?'دفعة':'Ödeme',ref:'PAY-'+p.id,detail:p.method+' '+(p.notes||''),debit:0,credit:Number(p.amount||0)});});
+  events.sort(function(a,b){return String(a.date).localeCompare(String(b.date));});var balance=0;
+  var rows=events.map(function(e){balance+=e.debit-e.credit;return [fmtDate(e.date),e.type,e.ref,e.detail,numFmt(e.debit),numFmt(e.credit),numFmt(balance)];});
+  var headers=currentLang==='ar'?['التاريخ','النوع','المرجع','التفاصيل','مدين ₺','دائن ₺','الرصيد ₺']:['Tarih','Tür','Referans','Açıklama','Borç ₺','Alacak ₺','Bakiye ₺'];
+  dlXlsx(makeWb(headers,rows,currentLang==='ar'?'كشف الحساب':'Hesap Ekstresi'),(currentLang==='ar'?'كشف_حساب_':'hesap_ekstresi_')+customer.replace(/[^\w\u0600-\u06FF-]/g,'_')+'.xlsx');
+}
+
+function recordCustomerPayment(){
+  var customer=_custHistCurrentName, amount=Number(document.getElementById('custPayAmount').value),date=document.getElementById('custPayDate').value||todayStr(),method=document.getElementById('custPayMethod').value,notes=document.getElementById('custPayNotes').value.trim();
+  if(!customer||!Number.isFinite(amount)||amount<=0){showToast(currentLang==='ar'?'أدخل مبلغ دفعة صحيحاً أكبر من صفر':'Sıfırdan büyük geçerli bir ödeme girin','err');return;}
+  var totals=_customerAccountTotals(customer);
+  if(amount>Math.max(0,totals.balance)+0.00001){if(!confirm(currentLang==='ar'?'مبلغ الدفعة أكبر من الرصيد المستحق. هل تريد تسجيل رصيد دائن للعميل؟':'Ödeme borçtan fazla. Müşteri alacağı olarak kaydedilsin mi?'))return;}
+  var reg=customers.find(function(c){return c.name===customer;});
+  customerPayments.push({id:_maxId(customerPayments,'id')+1,customerId:reg?reg.id:null,customer:customer,date:date,amount:amount,method:method,notes:notes,createdAt:new Date().toISOString()});
+  saveAll();document.getElementById('custPayAmount').value='';document.getElementById('custPayNotes').value='';renderCustomerAccount(customer);renderCustomersList();showToast(currentLang==='ar'?'✅ تم تسجيل الدفعة':'✅ Ödeme kaydedildi');
 }
 
 function _toggleCustInvSelectAll(checked){
@@ -12768,6 +12999,8 @@ function deleteSelectedCustomerInvoices(){
     return rows.length && rows.every(function(r){ return r.customer===customer; });
   });
   if(!valid.length){ showToast(isAr?'لم يتم العثور على فواتير صالحة للحذف':'Silinecek geçerli fatura bulunamadı','err'); return; }
+  var withReturns=valid.filter(function(no){return (returnsLog||[]).some(function(r){return String(r.invRef||'')===String(no);});});
+  if(withReturns.length){showToast(isAr?'تعذر الحذف: توجد مرتجعات مرتبطة بالفواتير التالية: '+withReturns.join('، ')+' . عالج المرتجعات أولاً.':'İadeli faturalar silinemez: '+withReturns.join(', '),'err');return;}
   var totalRows = valid.reduce(function(n,no){ return n + salesLog.filter(function(r){return r.invNo===no;}).length; },0);
   var msg = isAr
     ? 'هل تريد حذف '+valid.length+' فاتورة للعميل '+customer+'؟\n'+valid.join('، ')+'\n\nسيتم إعادة كميات هذه الفواتير إلى مستودعاتها وحذفها من سجل المبيعات والحركات المرتبطة. لا يمكن التراجع عن العملية إلا باستعادة نسخة احتياطية.'
@@ -12811,6 +13044,7 @@ function submitCustomer(){
     if(oldName && oldName !== name){
       (salesLog||[]).forEach(r=>{if(r.customer===oldName) r.customer=name;});
       (returnsLog||[]).forEach(r=>{if(r.customer===oldName) r.customer=name;});
+      (customerPayments||[]).forEach(p=>{if(p.customer===oldName){p.customer=name;p.customerId=editId;}});
     }
     showToast(isAr?`✅ تم تحديث ${name}`:`✅ ${name} güncellendi`);
   } else {
@@ -12821,6 +13055,7 @@ function submitCustomer(){
     if(legacyName && legacyName !== name){
       (salesLog||[]).forEach(r=>{if(r.customer===legacyName) r.customer=name;});
       (returnsLog||[]).forEach(r=>{if(r.customer===legacyName) r.customer=name;});
+      (customerPayments||[]).forEach(p=>{if(p.customer===legacyName)p.customer=name;});
     }
     showToast(legacyName ? (isAr?`✅ تم تحديث بيانات ${name}`:`✅ ${name} güncellendi`) : (isAr?`✅ تمت إضافة ${name}`:`✅ ${name} eklendi`));
   }
@@ -13941,6 +14176,7 @@ try { initPWA(); } catch(e) { console.log('PWA init skipped:', e); }
 // ══════════════════════════════════════════════
 var purchaseRows = [];
 var _purCounter = 1;
+var _editingPurchaseNo = null;
 
 function _nextPurNo() {
   var nums = purchaseLog.map(function(p){ return parseInt((p.invNo||'').replace(/\D/g,''))||0; });
@@ -14010,8 +14246,8 @@ function renderPurRows() {
   if (!tbody) return;
   tbody.innerHTML = purchaseRows.map(function(r,i){
     var opts = _visibleDb().filter(function(x,idx,arr){
-      return arr.findIndex(function(y){ return y.name===x.name&&y.pkg===x.pkg; })===idx;
-    }).map(function(x){ return '<option value="'+x.id+'|'+h(x.name)+'|'+h(x.pkg)+'">'+h(x.name)+' ('+h(x.pkg)+')</option>'; }).join('');
+      return arr.findIndex(function(y){ return y.name===x.name&&y.pkg===x.pkg; })===idx || Number(x.id)===Number(r.itemId);
+    }).map(function(x){ return '<option value="'+x.id+'|'+h(x.name)+'|'+h(x.pkg)+'" '+(Number(x.id)===Number(r.itemId)?'selected':'')+'>'+h(x.name)+' ('+h(x.pkg)+')</option>'; }).join('');
     var total = (r.qty||0)*(r.buyPrice||0);
     return '<tr>'+
       '<td style="text-align:center;font-size:11px;color:var(--gy5)">'+(i+1)+'</td>'+
@@ -14019,8 +14255,8 @@ function renderPurRows() {
         (r.name?'<div style="font-size:10px;color:var(--gy5);margin-top:2px">'+h(r.name)+'</div>':'')+
       '</td>'+
       '<td><input value="'+h(r.pkg||'')+'" style="font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--gy3);background:var(--gy0);width:80px" onchange="purRowField('+i+',\'pkg\',this.value)" placeholder="1L"></td>'+
-      '<td><input type="number" min="0.001" step="0.001" value="'+(r.qty||1)+'" style="font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--gy3);background:var(--gy0);width:70px" onchange="purRowField('+i+',\'qty\',parseFloat(this.value)||1)"></td>'+
-      '<td><input type="number" min="0" step="0.01" value="'+(r.buyPrice||0)+'" style="font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--gy3);background:var(--gy0);width:90px" onchange="purRowField('+i+',\'buyPrice\',parseFloat(this.value)||0)"></td>'+
+      '<td><input type="number" min="0.001" step="0.001" value="'+(r.qty!=null?r.qty:'')+'" style="font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--gy3);background:var(--gy0);width:70px" onchange="purRowField('+i+',\'qty\',this.value)"></td>'+
+      '<td><input type="number" min="0" step="0.01" value="'+(r.buyPrice||0)+'" style="font-size:12px;padding:4px;border-radius:5px;border:1px solid var(--gy3);background:var(--gy0);width:90px" onchange="purRowField('+i+',\'buyPrice\',this.value)"></td>'+
       '<td style="text-align:center;font-weight:700;color:#1A237E">'+(total>0?numFmt(total)+' ₺':'—')+'</td>'+
       '<td><button onclick="purRemoveRow('+i+')" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:12px">✕</button></td>'+
     '</tr>';
@@ -14058,6 +14294,21 @@ function _purUpdateTotal() {
   var el2 = document.getElementById('pur-total'); if(el2) el2.textContent = numFmt(sub)+' ₺';
 }
 
+function sanitizePurchaseQty(raw,field){
+  var v=String(raw==null?'':raw).trim().replace(/[٠-٩]/g,function(d){return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d));}).replace(/[۰-۹]/g,function(d){return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d));});
+  if(v.indexOf(',')>=0 && v.indexOf('.')>=0)return {ok:false,val:0,err:(field||'الكمية')+': صيغة كمية غير صالحة'};
+  if((v.match(/[.,]/g)||[]).length>1)return {ok:false,val:0,err:(field||'الكمية')+': فاصل عشري واحد فقط'};
+  v=v.replace(',','.');
+  if(!/^\d+(?:\.\d{1,3})?$/.test(v))return {ok:false,val:0,err:(field||'الكمية')+': أدخل كمية موجبة حتى 3 منازل عشرية'};
+  var n=Number(v);if(!Number.isFinite(n)||n<=0)return {ok:false,val:0,err:(field||'الكمية')+': يجب أن تكون الكمية أكبر من صفر'};
+  return {ok:true,val:n,err:''};
+}
+
+function _purchaseStockKey(itemId,name,pkg,dep){return String(itemId||'')+'|'+_productIdentityKey(name,pkg)+'|'+String(dep);}
+function _purchaseLineItem(line){
+  return db.find(function(x){return Number(x.id)===Number(line.itemId)&&Number(x.dep)===Number(line.dep);}) ||
+    db.find(function(x){return _productIdentityKey(x.name,x.pkg)===_productIdentityKey(line.itemName,line.pkg)&&Number(x.dep)===Number(line.dep);});
+}
 function savePurchaseInvoice() {
   var invNo = document.getElementById('pur-invno').value.trim() || _nextPurNo();
   var date = document.getElementById('pur-date').value || todayStr();
@@ -14065,44 +14316,82 @@ function savePurchaseInvoice() {
   var depSel = parseInt(document.getElementById('pur-dep').value)||1;
   var byVal = document.getElementById('pur-by').value.trim();
   var notesVal = document.getElementById('pur-notes').value.trim();
-
-  var validRows = purchaseRows.filter(function(r){ return r.name&&r.qty>0; });
+  if(!invNo){showToast(currentLang==='ar'?'أدخل رقم فاتورة الشراء':'Alış faturası numarası giriniz','err');return;}
+  if((purchaseLog||[]).some(function(p){return String(p.invNo||'').trim().toLocaleUpperCase()===String(invNo).trim().toLocaleUpperCase() && String(invNo)!==String(_editingPurchaseNo||'');})){
+    showToast(currentLang==='ar'?'رقم فاتورة الشراء مستخدم مسبقاً':'Bu alış faturası numarası zaten kullanılıyor','err');return;
+  }
+  var validRows = purchaseRows.filter(function(r){ return r.name&&Number(r.qty)>0; });
   if (!validRows.length) { showToast(currentLang==='ar'?'⚠️ أضف صنفاً واحداً على الأقل':'⚠️ En az bir ürün ekleyin','err'); return; }
-
-  var supName = '';
-  if (supId) { var sup=suppliers.find(function(s){return s.id===supId;}); if(sup)supName=sup.name; }
-
-  validRows.forEach(function(r) {
-    var dep = r.dep || depSel;
-    var item = db.find(function(x){ return x.name===r.name&&x.pkg===r.pkg&&x.dep===dep; });
-    var before = item ? item.qty : 0;
-    if (item) {
-      item.qty += r.qty;
-    } else {
-      var newId = _maxId(db,'id')+1;
-      item = {id:newId, name:r.name, pkg:r.pkg, dep:dep, qty:r.qty, price:0, custom:true};
-      db.push(item);
-    }
-    addAudit(ACT.IN, r.name, r.pkg, dep, before, item.qty, r.buyPrice, r.buyPrice, byVal||'purchase', invNo+'|'+supName);
-    movements.push({date:date, name:r.name, type:currentLang==='ar'?'شراء':'Alım', qty:r.qty, loc:supName||(currentLang==='ar'?'شراء':'Alım'), by:byVal||(currentLang==='ar'?'مشتريات':'Satınalma'), notes:invNo});
-    purchaseLog.push({
-      id: _maxId(purchaseLog,'id')+1,
-      date:date, invNo:invNo, supplierId:supId, supplierName:supName,
-      itemId:item.id, itemName:r.name, pkg:r.pkg, dep:dep,
-      qty:r.qty, buyPrice:r.buyPrice, total:r.qty*r.buyPrice,
-      by:byVal, notes:notesVal
-    });
+  var errors=[];
+  validRows.forEach(function(r){
+    var q=sanitizePurchaseQty(r.qty,'كمية '+r.name);
+    var bp=sanitizePrice(r.buyPrice,{field:'سعر شراء '+r.name});
+    if(!q.ok)errors.push(q.err);else r.qty=q.val;
+    if(!bp.ok)errors.push(bp.err);else r.buyPrice=bp.val;
+    if(!r.pkg)errors.push((currentLang==='ar'?'العبوة مطلوبة للدواء ':'Ambalaj gerekli: ')+r.name);
   });
+  if(errors.length){alert(errors.join('\n'));return;}
+  var supName=''; if(supId){var sup=suppliers.find(function(x){return x.id===supId;});if(sup)supName=sup.name;}
+  var oldLines=_editingPurchaseNo?purchaseLog.filter(function(p){return String(p.invNo)===String(_editingPurchaseNo);}):[];
+  // Calculate the full stock delta first. No stock is changed until every warehouse row passes.
+  var deltas={};
+  try {
+  oldLines.forEach(function(p){var item=_purchaseLineItem(p);if(!item)throw new Error('تعذر تحديد صنف قديم في فاتورة '+_editingPurchaseNo);var k=String(item.id);deltas[k]=(deltas[k]||0)-Number(p.qty||0);});
+  var resolved=[];
+  validRows.forEach(function(r){
+    var dep=Number(r.dep||depSel), item=db.find(function(x){return _productIdentityKey(x.name,x.pkg)===_productIdentityKey(r.name,r.pkg)&&Number(x.dep)===dep;});
+    resolved.push({row:r,dep:dep,item:item});
+    if(item){var k=String(item.id);deltas[k]=(deltas[k]||0)+Number(r.qty);}
+  });
+  Object.keys(deltas).forEach(function(k){var item=db.find(function(x){return String(x.id)===k;});if(item && Number(item.qty||0)+deltas[k]<0)throw new Error((currentLang==='ar'?'لا يمكن تعديل الفاتورة: الكمية المتبقية غير كافية للدواء ':'Fatura düzenlenemez; kalan stok yetersiz: ')+item.name+' ('+getWarehouseName(item.dep)+').');});
+  } catch(preflightError) { alert(preflightError.message); return; }
+  // Apply reverse of old lines, then apply replacement lines.
+  oldLines.forEach(function(p){var item=_purchaseLineItem(p);if(item){var before=item.qty;item.qty-=Number(p.qty||0);addAudit(ACT.OUT,item.name,item.pkg,item.dep,before,item.qty,p.buyPrice,p.buyPrice,byVal||'purchase-edit','إلغاء أثر فاتورة شراء '+invNo);}});
+  if(_editingPurchaseNo) purchaseLog=purchaseLog.filter(function(p){return String(p.invNo)!==String(_editingPurchaseNo);});
+  resolved.forEach(function(x){
+    var r=x.row,dep=x.dep,item=x.item;
+    if(!item){item={id:_maxId(db,'id')+1,name:r.name,pkg:r.pkg,dep:dep,qty:0,price:0,custom:true,productId:_productIdentityId(r.name,r.pkg)};db.push(item);}
+    var before=Number(item.qty||0);item.qty=before+Number(r.qty);item.productId=item.productId||_productIdentityId(item.name,item.pkg);
+    addAudit(ACT.IN,item.name,item.pkg,dep,before,item.qty,r.buyPrice,r.buyPrice,byVal||'purchase',invNo+'|'+supName);
+    movements.push({date:date,name:item.name,pkg:item.pkg,productId:item.productId,type:currentLang==='ar'?'شراء':'Alım',qty:r.qty,loc:supName||(currentLang==='ar'?'شراء':'Alım'),by:byVal||(currentLang==='ar'?'مشتريات':'Satınalma'),notes:invNo});
+    purchaseLog.push({id:_maxId(purchaseLog,'id')+1,date:date,invNo:invNo,supplierId:supId,supplierName:supName,itemId:item.id,itemName:item.name,pkg:item.pkg,productId:item.productId,dep:dep,qty:r.qty,buyPrice:r.buyPrice,total:r.qty*r.buyPrice,by:byVal,notes:notesVal});
+  });
+  _editingPurchaseNo=null;
+  markDirty();invalidateDbMap();
+  showToast(currentLang==='ar'?'✅ تم حفظ فاتورة الشراء':'✅ Satın alma faturası kaydedildi');
+  clearPurchaseForm();renderPurchaseLog();
+}
 
-  markDirty();
-  invalidateDbMap();
-  showToast(currentLang==='ar'?'✅ تم تسجيل فاتورة الشراء':'✅ Satın alma faturası kaydedildi');
-  clearPurchaseForm();
-  renderPurchaseLog();
+function editPurchaseInvoice(invNo){
+  var lines=purchaseLog.filter(function(p){return String(p.invNo)===String(invNo);});
+  if(!lines.length)return;
+  _editingPurchaseNo=String(invNo);purchaseRows=[];
+  var first=lines[0];
+  document.getElementById('pur-invno').value=first.invNo;
+  document.getElementById('pur-date').value=first.date||todayStr();
+  document.getElementById('pur-supplier').value=first.supplierId||'';
+  document.getElementById('pur-dep').value=first.dep||1;
+  document.getElementById('pur-by').value=first.by||'';
+  document.getElementById('pur-notes').value=first.notes||'';
+  lines.forEach(function(p,i){purchaseRows.push({id:_purCounter++,itemId:p.itemId,name:p.itemName,pkg:p.pkg,qty:p.qty,buyPrice:p.buyPrice,dep:p.dep});});
+  var btn=document.getElementById('b-pur-ok');if(btn)btn.textContent=currentLang==='ar'?'💾 حفظ تعديل فاتورة الشراء':'💾 Alış faturasını güncelle';
+  var title=document.getElementById('lbl-pur-t');if(title)title.textContent=(currentLang==='ar'?'✏️ تعديل فاتورة شراء ':'✏️ Alış faturası düzenle ')+invNo;
+  renderPurRows();document.getElementById('page-purchases').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function deletePurchaseInvoice(invNo){
+  var lines=purchaseLog.filter(function(p){return String(p.invNo)===String(invNo);});if(!lines.length)return;
+  var totals={};
+  for(var i=0;i<lines.length;i++){var p=lines[i],item=_purchaseLineItem(p);if(!item){alert(currentLang==='ar'?'تعذر تحديد أحد أصناف الفاتورة. لم يتم الحذف.':'Faturadaki ürünlerden biri bulunamadı. Silme yapılmadı.');return;}totals[item.id]=(totals[item.id]||0)+Number(p.qty||0);}
+  for(var id in totals){var it=db.find(function(x){return String(x.id)===String(id);});if(!it||Number(it.qty||0)<totals[id]){alert((currentLang==='ar'?'لا يمكن حذف الفاتورة لأن جزءاً من كمياتها لم يعد متوفراً في المخزون: ':'Fatura silinemez; alınan miktarın bir kısmı stokta bulunmuyor: ')+(it?it.name:id)+'.');return;}}
+  if(!confirm((currentLang==='ar'?'حذف فاتورة الشراء ':'Alış faturasını sil ')+invNo+'؟\n'+(currentLang==='ar'?'سيتم خصم كمياتها من المستودعات.':'Miktarlar depolardan düşülecek.')))return;
+  lines.forEach(function(p){var item=_purchaseLineItem(p);var before=item.qty;item.qty-=Number(p.qty||0);addAudit(ACT.OUT,item.name,item.pkg,item.dep,before,item.qty,p.buyPrice,p.buyPrice,'purchase-delete','حذف فاتورة شراء '+invNo);movements.push({date:todayStr(),name:item.name,pkg:item.pkg,productId:item.productId,type:currentLang==='ar'?'حذف شراء':'Alış silme',qty:p.qty,loc:getWarehouseName(item.dep),by:'User',notes:invNo});});
+  purchaseLog=purchaseLog.filter(function(p){return String(p.invNo)!==String(invNo);});markDirty();invalidateDbMap();renderPurchaseLog();showToast(currentLang==='ar'?'🗑️ تم حذف فاتورة الشراء وتسوية المخزون':'🗑️ Alış faturası silindi ve stok düzeltildi');
 }
 
 function clearPurchaseForm() {
-  purchaseRows = [];
+  _editingPurchaseNo=null;purchaseRows = [];
+  var btn=document.getElementById('b-pur-ok');if(btn)btn.textContent='✅ '+(currentLang==='ar'?'تأكيد الشراء':'Satın almayı onayla');
+  var title=document.getElementById('lbl-pur-t');if(title)title.textContent=currentLang==='ar'?'📦 فاتورة شراء جديدة':'📦 Yeni alış faturası';
   document.getElementById('pur-invno').value = _nextPurNo();
   document.getElementById('pur-date').value = todayStr();
   document.getElementById('pur-supplier').value = '';
@@ -14116,8 +14405,8 @@ function renderPurLogTh() {
   if (!th) return;
   var isAr = currentLang==='ar';
   th.innerHTML = (isAr
-    ? ['التاريخ','الفاتورة','المورد','الدواء','العبوة','المستودع','الكمية','سعر الشراء','الإجمالي','المسؤول']
-    : ['Tarih','Fatura','Tedarikçi','İlaç','Ambalaj','Depo','Miktar','Alış Fiyatı','Toplam','Sorumlu']
+    ? ['التاريخ','الفاتورة','المورد','الدواء','العبوة','المستودع','الكمية','سعر الشراء','الإجمالي','المسؤول','إجراءات']
+    : ['Tarih','Fatura','Tedarikçi','İlaç','Ambalaj','Depo','Miktar','Alış Fiyatı','Toplam','Sorumlu','İşlemler']
   ).map(function(h){ return '<th>'+h+'</th>'; }).join('');
 }
 
@@ -14138,7 +14427,7 @@ function renderPurchaseLog() {
   var stats = document.getElementById('pur-log-stats');
   if (stats) stats.textContent = (currentLang==='ar'?list.length+' سجل — إجمالي: ':list.length+' kayıt — Toplam: ')+numFmt(total)+' ₺';
 
-  if (!list.length) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--gy5)">'+(currentLang==='ar'?'لا توجد فواتير شراء':'Satın alma faturası yok')+'</td></tr>'; return; }
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--gy5)">'+(currentLang==='ar'?'لا توجد فواتير شراء':'Satın alma faturası yok')+'</td></tr>'; return; }
 
   tbody.innerHTML = list.map(function(p){
     return '<tr>'+
@@ -14152,6 +14441,7 @@ function renderPurchaseLog() {
       '<td style="text-align:center">'+(p.buyPrice>0?numFmt(p.buyPrice)+' ₺':'—')+'</td>'+
       '<td style="text-align:center;font-weight:700;color:#1A237E">'+(p.total>0?numFmt(p.total)+' ₺':'—')+'</td>'+
       '<td style="font-size:11px;color:var(--gy5)">'+h(p.by||'—')+'</td>'+
+      '<td><button class="btn bsm bam" data-inv="'+h(p.invNo)+'" onclick="editPurchaseInvoice(this.dataset.inv)">✏️</button> <button class="btn bsm bd" data-inv="'+h(p.invNo)+'" onclick="deletePurchaseInvoice(this.dataset.inv)">🗑️</button></td>'+
     '</tr>';
   }).join('');
 }
@@ -14661,6 +14951,8 @@ function _restoreStockForInvoice(invNo, options) {
 function cancelInvoice(invNo) {
   var rows = salesLog.filter(function(s){ return s.invNo === invNo; });
   if (!rows.length) { showToast('⚠️ الفاتورة غير موجودة', 'err'); return; }
+  var linkedReturns=(returnsLog||[]).filter(function(r){return String(r.invRef||'')===String(invNo);});
+  if(linkedReturns.length){showToast(currentLang==='ar'?'لا يمكن إلغاء الفاتورة لأنها مرتبطة بمرتجعات. عالج المرتجعات أولاً.':'Bu faturaya bağlı iadeler var. Önce iadeleri çözümleyin.','err');return;}
 
   var customer = rows[0].customer;
   var totalItems = rows.length;
@@ -15054,6 +15346,7 @@ function _buildInvoiceEditChanges(oldRows, newRows, metaBefore, metaAfter) {
 function saveEditedInvoice() {
   if (!_editInvNo) return;
   var invNo=_editInvNo;
+  if((returnsLog||[]).some(function(r){return String(r.invRef||'')===String(invNo);})){showToast(currentLang==='ar'?'لا يمكن تعديل هذه الفاتورة لوجود مرتجعات مرتبطة بها. عالج المرتجعات أولاً.':'Bu faturaya bağlı iadeler var. Önce iadeleri çözümleyin.','err');return;}
   var oldRows=salesLog.filter(function(s){return String(s.invNo)===String(invNo);}).map(function(r){return Object.assign({},r);});
   if(!oldRows.length){showToast('⚠️ '+(currentLang==='ar'?'الفاتورة غير موجودة':'Fatura bulunamadı'),'err');return;}
   var newCustomer=(document.getElementById('ei-customer').value||'').trim();
@@ -15100,11 +15393,22 @@ function saveEditedInvoice() {
     var sameIdentity=old && String(old.name)===String(r.name) && String(old.pkg||'')===String(r.pkg||'') && String(old.dep||'')===String(r.dep||'');
     if(!item && !(sameIdentity && Number(old.qty)===Number(r.qty))){errors.push('❌ '+r.name+(r.pkg?' ('+r.pkg+')':'')+': '+(currentLang==='ar'?'الصنف غير موجود في المخزون ولا يمكن تغيير كميته أو نقله':'Ürün stokta yok; miktarı/deposu değiştirilemez'));}
   });
-  // تحقق الكميات الإجمالية بعد إعادة كميات الفاتورة القديمة.
-  var requested={};
+  // احسب العجز المتوقع بعد إعادة كمية الفاتورة القديمة؛ يسمح النظام بالحفظ
+  // مع تحذير واضح ويسجل تسوية مستقلة حتى لا يُخفى الرصيد السالب.
+  var requested={}, stockShortages=[];
   _eiRows.forEach(function(r,i){var it=newItemByRow[i];if(it)requested[String(it.id)]=(requested[String(it.id)]||0)+(Number(r.qty)||0);});
-  Object.keys(requested).forEach(function(id){var it=db.find(function(x){return String(x.id)===id;});var available=(Number(it.qty)||0)+(oldQtyById[id]||0);if(requested[id]>available)errors.push('❌ '+it.name+': '+(currentLang==='ar'?'المطلوب ':'İstenen ')+requested[id]+' > '+available);});
+  Object.keys(requested).forEach(function(id){
+    var it=db.find(function(x){return String(x.id)===id;});
+    var available=(Number(it.qty)||0)+(oldQtyById[id]||0);
+    var shortage=requested[id]-available;
+    if(shortage>0)stockShortages.push({id:it.id,name:it.name,pkg:it.pkg,dep:it.dep,available:available,requested:requested[id],shortage:shortage});
+  });
   if(errors.length){alert(T('editInvError')+'\n'+errors.join('\n'));return;}
+  if(stockShortages.length){
+    var shortageText=stockShortages.map(function(x){return '• '+x.name+' ('+x.pkg+') — '+(currentLang==='ar'?'المتاح بعد إعادة الفاتورة القديمة: ':'Mevcut: ')+x.available+' / '+(currentLang==='ar'?'المطلوب: ':'İstenen: ')+x.requested+' / '+(currentLang==='ar'?'العجز: ':'Eksik: ')+x.shortage;}).join('\n');
+    var warning=(currentLang==='ar'?'⚠️ سيصبح مخزون بعض الأصناف سالباً بعد تعديل الفاتورة.\nسيتم حفظ التعديل وتسجيل تسوية عجز واضحة في سجل الحركات.\n\n':'⚠️ Fatura düzenlemesinden sonra bazı stoklar negatife düşecek.\nDüzenleme kaydedilecek ve stok açığı hareketlere ayrı kaydedilecek.\n\n')+shortageText+'\n\n'+(currentLang==='ar'?'هل تريد المتابعة؟':'Devam edilsin mi?');
+    if(!confirm(warning))return;
+  }
 
   // لقطة rollback كاملة للبيانات التي قد تتغير.
   var snap={db:db.map(function(x){return {id:x.id,qty:x.qty,outOfStock:x.outOfStock};}),salesLog:salesLog.map(function(x){return Object.assign({},x);}),movements:movements.map(function(x){return Object.assign({},x);}),auditLog:auditLog.map(function(x){return Object.assign({},x);}),customers:customers.map(function(x){return Object.assign({},x);}),dosesDB:(dosesDB||[]).map(function(x){return JSON.parse(JSON.stringify(x));})};
@@ -15112,7 +15416,7 @@ function saveEditedInvoice() {
     // أعد كميات الصفوف القديمة الموجودة فعلاً في المخزون.
     oldRows.forEach(function(r,i){var it=oldItemByRow[i];if(it){it.qty=(Number(it.qty)||0)+(Number(r.qty)||0);it.outOfStock=it.qty===0;}});
     // طبّق الكميات الجديدة؛ الصفوف القديمة التي لم يعد صنفها موجوداً تبقى تاريخياً دون مساس بالمخزون.
-    _eiRows.forEach(function(r,i){var it=newItemByRow[i];if(!it)return;var before=Number(it.qty)||0;if(before<r.qty)throw new Error(it.name+': '+(currentLang==='ar'?'المخزون غير كافٍ':'Yetersiz stok'));it.qty=before-r.qty;it.outOfStock=it.qty===0;});
+    _eiRows.forEach(function(r,i){var it=newItemByRow[i];if(!it)return;var before=Number(it.qty)||0;it.qty=before-r.qty;it.outOfStock=it.qty===0;});
     // استبدل سجلات المبيعات فقط بعد نجاح التحقق والحساب.
     salesLog=salesLog.filter(function(s){return String(s.invNo)!==String(invNo);});
     _eiRows.forEach(function(r,i){
@@ -15132,6 +15436,10 @@ function saveEditedInvoice() {
     _eiRows.forEach(function(r,i){var it=newItemByRow[i];movements.push({date:newDate,name:it?it.name:r.name,type:currentLang==='ar'?'إخراج':'Çıkış',qty:r.qty,loc:'Sale→'+newCustomer+' | '+depN(r.dep),by:newCustomer,notes:invNo});
       var old=oldRows[r._originalIndex!==undefined?r._originalIndex:i];
       if(it && old && (String(old.urefType||'')!==String(r.urefType||'')||String(old.urefVal||'')!==String(r.urefVal||'')||String(old.urefUnit||'')!==String(r.urefUnit||'')||String(old.urefNote||'')!==String(r.urefNote||''))) _saveInvoiceDoseReference(it,r,invNo,newDate,newCustomer);
+    });
+    // سجل مستقل للعجز الناتج عن التعديل، ولا يغيّر المخزون مرة ثانية.
+    stockShortages.forEach(function(x){
+      movements.push({date:newDate,name:x.name,type:currentLang==='ar'?'تنبيه عجز مخزون':'Stok açığı uyarısı',qty:x.shortage,loc:'InvoiceEditStockAdjustment→'+invNo+' | '+depN(x.dep),by:newCustomer,notes:JSON.stringify({invoice:invNo,available:x.available,requested:x.requested,shortage:x.shortage,finalStock:(Number(db.find(function(d){return d.id===x.id;}).qty)||0)})});
     });
     // سجل تدقيق للمخزون فقط إذا تغيّرت الكمية فعلياً.
     snap.db.forEach(function(v){var it=db.find(function(x){return x.id===v.id;});if(it && Number(it.qty)!==Number(v.qty)){addAudit(ACT.SALE,it.name,it.pkg,it.dep,v.qty,it.qty,0,0,newCustomer,invNo+' [invoice edit]');}});
