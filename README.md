@@ -1,3 +1,5 @@
+BAYDOUN AGRO V20.40
+
 ## V20.18 — Dashboard cleanup
 - Stock-alerts panel removed from the dashboard; expanded invoice rows fit phone screens. Data format and existing backups are unchanged.
 
