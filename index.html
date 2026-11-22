@@ -4621,7 +4621,7 @@ var SCHEMA_VERSION = 6;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.46';
+var APP_VERSION = '20.47';
 
 // Product identity: one stable logical product across warehouses, without merging stock rows.
 function _productNormPart(v){
@@ -8726,23 +8726,32 @@ function _visibleDb(){ return db.filter(_isVisibleProduct); }
 var LOW_STOCK_MAX=5;                                   // حد «المخزون المنخفض» الموحد
 function _isLowStock(x){var q=Number(x&&x.qty);return q>0&&q<=LOW_STOCK_MAX;}
 function _isOutStock(x){return Number(x&&x.qty)<=0;}
-// V20.46: حالة موحّدة للعرض فقط (عجز < 0 ، نافد = 0 ، منخفض 0<q<=LOW_STOCK_MAX ، جيد)
+// V20.47: حالة موحّدة للعرض فقط (عجز < 0 ، نافد = 0 ، منخفض 0<q<=LOW_STOCK_MAX ، جيد)
 function _stockState(q){q=Number(q)||0;return q<0?'short':(q===0?'out':(q<=LOW_STOCK_MAX?'low':'ok'));}
 function _localDateStr(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-// V20.46: ينشئ/يجد سجل الوجهة في النقل مع الحفاظ على الصلاحية والمعرّف — لا يغيّر أي كمية
+// V20.47: وجهة النقل تطابق هوية المنتج والعبوة والمستودع وتاريخ الصلاحية معاً.
+// لا نخلط دفعات بصلاحيات مختلفة، ولا ندمج معرفي منتج مختلفين حتى لو تشابه الاسم.
 function _transferDstItem(srcItem,toDep){
-  var dst=db.find(function(x){return Number(x.dep)===Number(toDep)&&x.name===srcItem.name&&x.pkg===srcItem.pkg;});
+  var srcPid=srcItem.productId||_productIdentityId(srcItem.name,srcItem.pkg);
+  var srcExpiry=String(srcItem.expiry||'').trim().slice(0,10);
+  var srcKey=_productIdentityKey(srcItem.name,srcItem.pkg);
+  var dst=db.find(function(x){
+    if(Number(x.dep)!==Number(toDep))return false;
+    if(_productIdentityKey(x.name,x.pkg)!==srcKey)return false;
+    var dstPid=String(x.productId||'');
+    if(dstPid&&srcPid&&dstPid!==srcPid)return false;
+    // القيمة الفارغة للصلاحية دفعة مستقلة عن أي تاريخ معروف.
+    return String(x.expiry||'').trim().slice(0,10)===srcExpiry;
+  });
   if(!dst){
-    dst={id:_maxId(db)+1,name:srcItem.name,pkg:srcItem.pkg,dep:toDep,qty:0,price:srcItem.price,custom:true,productId:srcItem.productId||_productIdentityId(srcItem.name,srcItem.pkg)};
-    if(srcItem.expiry)dst.expiry=srcItem.expiry;
+    dst={id:_maxId(db)+1,name:srcItem.name,pkg:srcItem.pkg,dep:toDep,qty:0,price:srcItem.price,custom:true,productId:srcPid};
+    if(srcExpiry)dst.expiry=srcExpiry;
     db.push(dst);invalidateDbMap();
-  }else{
-    if(!dst.productId)dst.productId=srcItem.productId||_productIdentityId(srcItem.name,srcItem.pkg);
-    // عند الدمج في سجل موجود نحتفظ بأقرب تاريخ صلاحية (الأكثر تحفظاً للتنبيهات)
-    if(srcItem.expiry&&(!dst.expiry||String(srcItem.expiry)<String(dst.expiry)))dst.expiry=srcItem.expiry;
+  }else if(!dst.productId){
+    dst.productId=srcPid;
   }
   return dst;
-}   // نافد (0) أو عجز (سالب)
+}   // دفعة النقل لا تندمج مع دفعة ذات صلاحية مختلفة
 // مفتاح موحد للعميل: يتجاهل الحالة والمسافات الزائدة وتشكيلات الحروف التركية
 function _custKey(n){return norm(String(n==null?'':n)).replace(/\s+/g,' ').trim();}
 function _sameCust(a,b){return _custKey(a)===_custKey(b);}
@@ -9042,7 +9051,8 @@ function submitWhBulkTransfer(fromDep){
   const ts=new Date();
   let moved=0;
   items.forEach(srcItem=>{
-    if(!srcItem.qty) return;
+    // لا ننقل السجلات النافدة أو ذات العجز في النقل الجماعي.
+    if(!(Number(srcItem.qty)>0)) return;
     let dstItem=_transferDstItem(srcItem,toDep);
     const srcBefore=srcItem.qty, dstBefore=dstItem.qty, qty=srcItem.qty;
     // ── atomic: rollback srcItem إذا فشل dstItem ──
@@ -11275,12 +11285,23 @@ function _buildDrugLifetimeEvents(product){
   (db||[]).forEach(function(x){if((x.productId||_productIdentityId(x.name,x.pkg))===pid){aliases.add(_productNormPart(x.name)+'|'+_productNormPack(x.pkg));aliasNames.add(_productNormPart(x.name));}});
   function match(r,nm,pk){var rp=String(r.productId||'');if(rp&&rp===pid)return true;nm=nm||r.name||r.itemName||'';pk=pk||r.pkg||'';return !!nm&&(aliases.has(_productNormPart(nm)+'|'+_productNormPack(pk))||(!pk&&aliasNames.has(_productNormPart(nm))));}
   var ev=[],seen=new Set();
-  function add(e){e.qty=Number(e.qty)||0;e.dep=Number(e.dep)||0;e.date=String(e.date||'');e._key=[e.date,e.type,e.invNo||'',e.customer||'',e.dep,e.qty,e.notes||'',e.uid||''].join('|');if(!seen.has(e._key)){seen.add(e._key);ev.push(e);}}
+  function add(e){e.qty=Number(e.qty)||0;e.dep=Number(e.dep)||0;e.date=_auditDateISO(e);e._key=[e.date,e.type,e.invNo||'',e.customer||'',e.dep,e.qty,e.notes||'',e.uid||''].join('|');if(!seen.has(e._key)){seen.add(e._key);ev.push(e);}}
   (purchaseLog||[]).forEach(function(r){if(match(r,r.itemName,r.pkg))add({date:r.date,type:'شراء / إضافة من فاتورة شراء',qty:r.qty,sign:1,dep:r.dep,party:r.supplierName||'—',invNo:r.invNo||'',price:r.buyPrice,notes:r.notes||'',source:'purchase'});});
   (salesLog||[]).forEach(function(r){if(match(r,r.name,r.pkg))add({date:r.date,type:'بيع',qty:r.qty,sign:-1,dep:r.dep,party:r.customer||'—',invNo:r.invNo||'',price:r.price,notes:r.invoiceNotes||'',source:'sale'});});
   (returnsLog||[]).forEach(function(r){if(match(r,r.name,r.pkg))add({date:r.date,type:'مرتجع من عميل',qty:r.qty,sign:1,dep:r.dep,party:r.customer||'—',invNo:r.invRef||'',price:r.unitPrice,notes:r.reason||'',source:'return'});});
+  // سجل النقل هو المصدر الأساسي للنقل بين المستودعات؛ كل عملية تُعرض كسطر خروج وسطر دخول.
+  // لا نحتسب audit/movements مرة ثانية إذا كان سجل النقل المقابل موجوداً.
+  var transferKeys=new Set();
+  function transferKey(r){return [_auditDateISO(r),_productIdentityKey(r.name||r.itemName||'',r.pkg||''),Number(r.fromDep||0),Number(r.toDep||0),Number(r.qty||0)].join('|');}
+  (transferLog||[]).forEach(function(r){if(!match(r,r.name,r.pkg))return;var k=transferKey(r);transferKeys.add(k);var base='t'+String(r.id||k);
+    add({date:r.date,type:'نقل صادر',qty:r.qty,sign:-1,dep:r.fromDep,party:r.by||'—',invNo:'',price:null,notes:r.notes||'',source:'transfer',uid:base+'-out'});
+    add({date:r.date,type:'نقل وارد',qty:r.qty,sign:1,dep:r.toDep,party:r.by||'—',invNo:'',price:null,notes:r.notes||'',source:'transfer',uid:base+'-in'});
+  });
   // Movements fill operations not represented by sales/purchase/return ledgers (manual in/out, transfers, adjustments).
-  (movements||[]).forEach(function(r){if(r.transfer)return;if(!match(r,r.name,r.pkg))return;var t=String(r.type||''),loc=String(r.loc||''),note=String(r.notes||'');
+  (movements||[]).forEach(function(r){if(!match(r,r.name,r.pkg))return;var t=String(r.type||''),loc=String(r.loc||''),note=String(r.notes||'');
+    if(r.transfer){var tk=transferKey({date:r.date,name:r.name,pkg:r.pkg,fromDep:r.fromDep,toDep:r.toDep,qty:r.qty});if(transferKeys.has(tk))return;transferKeys.add(tk);var mu='m'+String(r.id||tk);
+      add({date:r.date,type:'نقل صادر',qty:r.qty,sign:-1,dep:r.fromDep,party:r.by||'—',invNo:'',price:null,notes:note,source:'transfer',uid:mu+'-out'});
+      add({date:r.date,type:'نقل وارد',qty:r.qty,sign:1,dep:r.toDep,party:r.by||'—',invNo:'',price:null,notes:note,source:'transfer',uid:mu+'-in'});return;}
     var isPurVoid=/حذف شراء|Alış silme/.test(t),isSale=/Sale→|بيع|Çıkış/i.test(loc+' '+t),isPurchase=!isPurVoid&&/شراء|Alım/i.test(t),isReturn=/مرتجع|İade/i.test(t);
     if(isSale||isPurchase||isReturn){var duplicate=ev.some(function(e){return e.date===String(r.date||'')&&e.qty===Number(r.qty||0)&&((isSale&&e.source==='sale')||(isPurchase&&e.source==='purchase')||(isReturn&&e.source==='return'))&&(!r.notes||!e.invNo||String(e.invNo)===String(r.notes));});if(duplicate)return;}
     var sign=isPurVoid?-1:/إخراج|سحب|Çıkış|نقل صادر/i.test(t+' '+loc)?-1:/إدخال|إضافة|شراء|Alım|مرتجع|İade|نقل وارد/i.test(t+' '+loc)?1:0;
@@ -11290,10 +11311,15 @@ function _buildDrugLifetimeEvents(product){
     add({date:r.date,type:t||'حركة مخزون',qty:r.qty,sign:sign,dep:dep,party:r.by||'—',invNo:/Sale→/.test(loc)?note:'',price:null,notes:note,source:'movement'});
   });
   (auditLog||[]).forEach(function(r){if(!match(r,r.itemName,r.pkg))return;
-    // V20.46: سجل التدقيق يكرر ما تغطيه سجلات البيع/الشراء/المرتجع/الحركات (كان يضاعف الأرصدة)؛ نأخذ منه عمليات النقل فقط.
+    // سجل التدقيق مصدر احتياطي فقط للنقل القديم الذي لا يوجد له transferLog أو movement.
     if(String(r.notes||'').indexOf('🔀')<0)return;
     var dlt=Number(r.qtyDelta)||0;if(!dlt)return;
-    add({date:_auditDateISO(r),type:'نقل بين المستودعات',qty:Math.abs(dlt),sign:dlt>=0?1:-1,dep:r.dep,party:r.by||'—',invNo:'',price:null,notes:r.notes||'',source:'audit',uid:'a'+(r.id||'')});});
+    var note=String(r.notes||''),date=_auditDateISO(r),dep=Number(r.dep||0);
+    var paired=(transferLog||[]).some(function(t){return match(t,t.name,t.pkg)&&_auditDateISO(t)===date&&Number(t.qty||0)===Math.abs(dlt)&&((dlt<0&&Number(t.fromDep)===dep)||(dlt>0&&Number(t.toDep)===dep));});
+    if(paired)return;
+    var movementPaired=(movements||[]).some(function(m){return m.transfer&&match(m,m.name,m.pkg)&&_auditDateISO(m)===date&&Number(m.qty||0)===Math.abs(dlt)&&((dlt<0&&Number(m.fromDep)===dep)||(dlt>0&&Number(m.toDep)===dep));});
+    if(movementPaired)return;
+    add({date:date,type:'نقل بين المستودعات',qty:Math.abs(dlt),sign:dlt>=0?1:-1,dep:dep,party:r.by||'—',invNo:'',price:null,notes:note,source:'audit',uid:'a'+(r.id||'')});});
   ev.sort(function(a,b){var da=Date.parse(a.date)||0,dbb=Date.parse(b.date)||0;return da-dbb;});
   // Compute opening balance backwards from current stock; per-warehouse balances stay separate.
   var current={};(db||[]).forEach(function(x){if((x.productId||_productIdentityId(x.name,x.pkg))===pid)current[x.dep]=(current[x.dep]||0)+Number(x.qty||0);});
@@ -11445,7 +11471,7 @@ function printStockReport(){
 function exportReportExcel(){
   const isAr=currentLang==='ar';
   const depF=parseInt(document.getElementById('rptDepFilter')?.value||0);
-  let list=(depF?db.filter(x=>x.dep===depF):db).filter(x=>x.qty>0);
+  let list=(depF?db.filter(x=>x.dep===depF):db).slice();
   list.sort(alphaInventoryItemCompare);
   const h=isAr?['#','الدواء','العبوة','المستودع','الكمية','الحالة']:['#','İlaç','Ambalaj','Depo','Miktar','Durum'];
   const rows=list.map((x,i)=>[i+1,x.name,x.pkg,depN(x.dep),x.qty,
