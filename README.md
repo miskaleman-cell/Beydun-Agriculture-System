@@ -1,4 +1,4 @@
-BAYDOUN AGRO V20.45
+BAYDOUN AGRO V20.46
 
 ## V20.18 — Dashboard cleanup
 - Stock-alerts panel removed from the dashboard; expanded invoice rows fit phone screens. Data format and existing backups are unchanged.
@@ -87,11 +87,10 @@ Service Worker) لأي بيانات تم تحميلها وتخزينها مسب�
 
 ## 🔄 عند تحديث التطبيق لاحقًا
 
-في كل مرة تعدّل فيها `index.html` وترفع نسخة جديدة، **غيّر رقم النسخة** في
-أول `sw.js`:
+في كل مرة تعدّل فيها `index.html` وترفع نسخة جديدة، **غيّر `APP_VERSION` في `index.html` ونفس الرقم في أول `sw.js`** و`manifest.json` وعنوان `CHANGELOG.md`:
 
 ```js
-const CACHE_NAME = 'beydun-agro-v2';   // كان v1
+let CACHE_NAME = 'baydoun-agro-v20.46';   // يتبع APP_VERSION في index.html
 ```
 
 هذا يجبر المتصفح على تحميل أحدث نسخة بدلًا من الاحتفاظ بنسخة قديمة مخزّنة.
