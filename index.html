@@ -4621,7 +4621,7 @@ var SCHEMA_VERSION = 6;
 // verify-version.js للتأكد من التطابق قبل التسليم.
 // sw.js يقرأ هذا الرقم تلقائياً عبر postMessage عند كل تحميل — لا حاجة
 // لتعديل CACHE_NAME في sw.js يدوياً.
-var APP_VERSION = '20.47';
+var APP_VERSION = '20.49';
 
 // Product identity: one stable logical product across warehouses, without merging stock rows.
 function _productNormPart(v){
@@ -5933,10 +5933,26 @@ function _autoFillMissingHistoricalInvoicePrices() {
   return {updated:updated, unmatched:unmatched};
 }
 
+function _normalizePricesToFirstWarehouse(){
+  var groups=new Map();
+  (db||[]).forEach(function(x){var k=priceListGroupKey(x);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);});
+  var changed=0;
+  groups.forEach(function(rows){
+    var ref=rows.find(function(x){return Number(x.dep)===1;});
+    if(!ref)return; // لا نخمن سعراً لمجموعة لا تملك سجلاً في المستودع الأول.
+    var canonical=Math.max(0,Number(ref.price)||0);
+    rows.forEach(function(x){var old=Math.max(0,Number(x.price)||0);if(old===canonical)return;x.price=canonical;changed++;addAudit(ACT.PRICE,x.name,x.pkg,x.dep,null,null,old,canonical,'System',currentLang==='ar'?'توحيد تلقائي حسب سعر المستودع الأول':'1. depo fiyatına göre otomatik birleştirme');});
+  });
+  if(changed){saveAll();console.info('Unified '+changed+' stock price records using warehouse 1 prices.');}
+  return changed;
+}
+
 loadAll().then(function() {
   // تحميل المستودعات وتزامنها أولاً قبل أي شيء
   try { loadWarehouses(); } catch(e) {}
   try { syncWarehousesToTX(); } catch(e) {}
+  // اعتماد سعر المستودع الأول لكل اسم وعبوة متطابقين في المستودعات الثلاثة.
+  try { _normalizePricesToFirstWarehouse(); } catch(e) { console.warn('Price normalization:',e); }
   // بعد تحميل المخزون والأسعار الحالية، عبّئ تلقائياً أسعار الفواتير القديمة المفقودة.
   try {
     var _priceFillResult = _autoFillMissingHistoricalInvoicePrices();
@@ -8432,14 +8448,17 @@ function submitNewProduct(){
   const pkg  = document.getElementById('np-pkg').value.trim();
   const dep  = parseInt(document.getElementById('np-dep').value);
   const qty  = parseInt(document.getElementById('np-qty').value)||0;
-  const price= parseFloat(document.getElementById('np-price').value)||0;
+  const enteredPrice= parseFloat(document.getElementById('np-price').value)||0;
   if(!name||!pkg){showToast(T('enterMedAndPkg'),'err');return;}
   // التحقق من عدم التكرار
   if(db.find(x=>x.name===name&&x.pkg===pkg&&x.dep===dep)){
     showToast(T('medAlreadyExists'),'err');return;
   }
+  const existingGroup=db.filter(function(x){return priceListGroupKey(x)===priceListGroupKey({name:name,pkg:pkg});});
+  const warehouseOne=existingGroup.find(function(x){return Number(x.dep)===1;});
+  const unifiedPrice=existingGroup.length?(warehouseOne?Math.max(0,Number(warehouseOne.price)||0):Math.max(0,Number(existingGroup[0].price)||0)):price;
   const newId = _maxId(db) + 1;
-  const newItem = {id:newId, name, pkg, dep, qty, price, custom:true, productId:_productIdentityId(name,pkg)};
+  const newItem = {id:newId, name, pkg, dep, qty, price:unifiedPrice, custom:true, productId:_productIdentityId(name,pkg)};
   db.push(newItem);
   addAudit(ACT.IN, name, pkg, dep, 0, qty, null, price, T('newProductAudit'),'User',T('newProductAudit'));
   saveAll();
@@ -8948,7 +8967,7 @@ function _renderWhBody(dep, list, start, batchSize){
     }
   }
 }
-function wPriceChange(id,newP,oldP){if(newP===oldP)return;const item=db.find(x=>x.id===id);if(!item)return;addAudit(ACT.PRICE,item.name,item.pkg,item.dep,null,null,oldP,newP,'User',T('priceEditAudit'));item.price=newP;markDirty();}
+function wPriceChange(id,newP,oldP){if(newP===oldP)return;const item=db.find(x=>x.id===id);if(!item)return;_setPriceForItemEverywhere(item,newP,oldP);}
 
 // ══════════════════════════════════════════════
 // ☑️ التحديد الجماعي + الإجراءات الجماعية (مستودع)
@@ -9184,7 +9203,7 @@ function openQtyEditor(dep){
           <table id="qe-table">
             <thead><tr style="background:${grad};position:sticky;top:0;z-index:2">
               <th>#</th>
-              <th>${T('product')}</th>
+              <th>${isAr?'اسم الدواء (قابل للتعديل)':'İlaç adı (düzenlenebilir)'}</th>
               ${dep==null?`<th>${T('dep')}</th>`:''}
               <th>${T('currentQty')}</th>
               <th style="background:#fff9c4;color:#333">${T('newQty')}</th>
@@ -9212,7 +9231,7 @@ function qtyEditorRow(x,isAr,showDep){
   const depLabel=isAr?depWh.nameAr:depWh.nameTr;
   return `<tr data-id="${x.id}" data-name="${norm(x.name)}" data-pkg="${norm(x.pkg)}" data-dep="${x.dep}" class="qe-row">
     <td style="color:var(--gy5);font-size:11px">${x.id}</td>
-    <td><strong style="font-size:12px">${x.name}</strong><br><span style="font-size:10px;color:#888">${x.pkg}</span></td>
+    <td style="min-width:170px"><input type="text" class="qe-name" data-id="${x.id}" data-orig="${h(x.name)}" value="${h(x.name)}" aria-label="${isAr?'اسم الدواء':'İlaç adı'}" style="width:100%;min-width:145px;padding:6px 7px;border:1px solid #d1d5db;border-radius:6px;font-family:inherit;font-size:12px;font-weight:700"><div style="font-size:10px;color:#888;margin-top:3px">${h(x.pkg)}</div></td>
     ${showDep?`<td><span class="bdg ${depWh.colorClass}" style="font-size:10px">${depLabel}</span></td>`:''}
     <td style="text-align:center"><strong id="qe-cur-${x.id}">${x.qty}</strong></td>
     <td style="background:#FFFDE7;padding:4px 6px">
@@ -9291,10 +9310,23 @@ function saveQtyChanges(){
   }
 
   const changes=inputs.filter(i=>i.value!==''&&parseInt(i.value)!==parseInt(i.dataset.orig));
-  if(!changes.length){
+  const nameInputs=[...document.querySelectorAll('.qe-name')];
+  const nameChanges=nameInputs.filter(function(i){return String(i.value||'').trim()!==String(i.dataset.orig||'').trim() && String(i.value||'').trim()!=='';});
+  if(!changes.length&&!nameChanges.length){
     showToast(T('noChanges'),'err');
     return;
   }
+  nameChanges.forEach(function(inp){
+    var item=db.find(function(x){return Number(x.id)===Number(inp.dataset.id);});
+    if(!item)return;
+    var oldName=String(item.name||''),newName=String(inp.value||'').trim().toUpperCase();
+    if(!newName||newName===oldName)return;
+    var key=priceListGroupKey(item),pkg=item.pkg;
+    // إعادة تسمية مجموعة الاسم+العبوة في كل المستودعات، بما فيها السجلات ذات الكمية صفر.
+    var related=db.filter(function(x){return priceListGroupKey(x)===key;});
+    related.forEach(function(x){x.name=newName;addAudit(ACT.EDIT,oldName,pkg,x.dep,null,null,null,null,by,(currentLang==='ar'?'تغيير اسم الدواء إلى: ':'İlaç adı değiştirildi: ')+newName);});
+    movements.push({date:todayStr(),name:newName,pkg:pkg,type:currentLang==='ar'?'تعديل اسم دواء':'İlaç adı düzenleme',qty:0,loc:depN(item.dep),by:by,notes:(currentLang==='ar'?'الاسم السابق: ':'Eski ad: ')+oldName});
+  });
   changes.forEach(inp=>{
     const id=parseInt(inp.dataset.id);
     const newQty=parseInt(inp.value);
@@ -9326,7 +9358,7 @@ function saveQtyChanges(){
     }
   });
   saveAll();
-  showToast(`✅ ${changes.length} ${T('updatedItems')}`);
+  showToast(`✅ ${changes.length+nameChanges.length} ${currentLang==='ar'?'تعديل':'güncelleme'}`);
   closeQtyEditor();
   // إعادة رسم الصفحة الحالية
   const cur=document.querySelector('.nav-btn.active');
@@ -9527,8 +9559,11 @@ function saveNewMed(dep){
   }
 
   // إنشاء id جديد
+  const existingGroup=db.filter(function(x){return priceListGroupKey(x)===priceListGroupKey({name:name,pkg:pkg});});
+  const warehouseOne=existingGroup.find(function(x){return Number(x.dep)===1;});
+  const unifiedPrice=existingGroup.length?(warehouseOne?Math.max(0,Number(warehouseOne.price)||0):Math.max(0,Number(existingGroup[0].price)||0)):price;
   const newId=_maxId(db)+1;
-  const newItem={id:newId,name,pkg,dep,qty:0,price,custom:true};
+  const newItem={id:newId,name,pkg,dep,qty:0,price:unifiedPrice,custom:true};
   db.push(newItem);
   saveAll();
 
@@ -10912,18 +10947,17 @@ function buildPriceListGroups(){
   const map=new Map();
   db.forEach(x=>{
     const key=priceListGroupKey(x);
-    if(!map.has(key)) map.set(key,{name:String(x.name||'').trim(),pkg:String(x.pkg||'').trim(),price:Number(x.price)||0,totalQty:0,totalVal:0,deps:new Map(),records:[]});
+    if(!map.has(key)) map.set(key,{name:String(x.name||'').trim(),pkg:String(x.pkg||'').trim(),price:Number(x.price)||0,totalQty:0,totalVal:0,deps:new Map(),records:[],pricesByDep:new Map(),_prices:new Set()});
     const g=map.get(key);
     const qty=Number(x.qty)||0, price=Number(x.price)||0;
     g.records.push({qty:qty,expiry:String(x.expiry||'').slice(0,10)});
     g.totalQty+=qty;
     g.totalVal+=qty*price;
     g.deps.set(x.dep,(g.deps.get(x.dep)||0)+qty);
-    // الحفاظ على قاعدة السعر السابقة: أقل سعر موجب مسجل بين المستودعات.
-    if(price>0 && (g.price===0||price<g.price)) g.price=price;
-    if(price>0){ g._p=g._p||new Set(); g._p.add(price); }
+    // لا نخترع سعراً موحداً: نحافظ على سعر كل سجل ومستودع كما ورد في البيانات.
+    if(price>0){g._prices.add(price);g.pricesByDep.set(x.dep,price);}
   });
-  return Array.from(map.values()).map(g=>{const pc=!!(g._p&&g._p.size>1);delete g._p;return {...g,priceConflict:pc,deps:Array.from(g.deps,([dep,qty])=>({dep,qty}))};});
+  return Array.from(map.values()).map(g=>{const vals=Array.from(g._prices);const pc=vals.length>1;g.price=vals.length===1?vals[0]:0;delete g._prices;return {...g,priceConflict:pc,priceLabel:pc?'متعدد':(g.price||0),deps:Array.from(g.deps,([dep,qty])=>({dep,qty})),priceDetails:Array.from(g.pricesByDep,([dep,price])=>({dep,price}))};});
 }
 var _hideExpiredPriceList=false;
 function _priceListGroupIsExpired(g){
@@ -10952,7 +10986,7 @@ function filterPriceList(){
       <td style="color:var(--gy5)">${i+1}</td>
       <td><strong>${h(x.name)}</strong></td>
       <td><span class="bdg bb2">${h(x.pkg)}</span></td>
-      <td style="color:#0000FF;font-weight:700" ${x.priceConflict?`title="${currentLang==='ar'?'أسعار المستودعات مختلفة؛ القيمة محسوبة بسعر كل مستودع':'Depolar arası fiyat farkı var; değer her deponun kendi fiyatıyla hesaplanır'}"`:''}>${x.price>0?numFmt(x.price):'—'}${x.priceConflict?' ⚠️':''}</td>
+      <td style="color:${x.priceConflict?'#B45309':'#0000FF'};font-weight:700" ${x.priceConflict?`title="${h(x.priceDetails.map(d=>depN(d.dep)+': '+numFmt(d.price)+' ₺').join(' | '))}"`:''}>${x.priceConflict?(currentLang==='ar'?'متعدد':'Çoklu'):(x.price>0?numFmt(x.price):'—')}${x.priceConflict?' ⚠️':''}</td>
       <td><strong>${h(x.totalQty)}</strong></td>
       <td style="font-weight:700;color:var(--g8)">${numFmt(x.totalVal)} ₺</td>
       <td>${depTags}</td>
@@ -10965,7 +10999,7 @@ function exportPriceListExcel(){
   const isAr=currentLang==='ar';
   const list=buildPriceListGroups().filter(x=>!_hideExpiredPriceList||!_priceListGroupIsExpired(x)).sort((a,b)=>alphaNameCompare(a.name,b.name)||alphaNameCompare(a.pkg,b.pkg));
   const h=isAr?['#','الدواء','العبوة','السعر ₺','الكمية الإجمالية','القيمة الإجمالية ₺','المستودعات']:['#','İlaç','Ambalaj','Fiyat ₺','Toplam Stok','Toplam Değer ₺','Depolar'];
-  const rows=list.map((x,i)=>[i+1,x.name,x.pkg,x.price>0?x.price:'—',x.totalQty,x.totalVal,x.deps.map(d=>depN(d.dep)+':'+d.qty).join(' | ')]);
+  const rows=list.map((x,i)=>[i+1,x.name,x.pkg,x.priceConflict?(isAr?'متعدد':'Çoklu'):(x.price>0?x.price:'—'),x.totalQty,x.totalVal,x.deps.map(d=>depN(d.dep)+':'+d.qty).join(' | ')]);
   dlXlsx(makeWb(h,rows,isAr?'لائحة الأسعار':'Fiyat Listesi'),`${isAr?'لائحة_الأسعار':'fiyat_listesi'}_${todayStr()}.xlsx`);
   showToast('📥');
 }
@@ -10983,8 +11017,9 @@ function _buildUnifiedPriceGroups(){
   });
   return Array.from(map.values()).map(function(g){
     var distinct=Array.from(new Set(g.prices));
-    // السعر الموحد المعروض هو أقل سعر موجب سابقاً، مع إظهار التنبيه عند وجود اختلاف.
-    g.price=g.prices.length?Math.min.apply(null,g.prices):0;
+    // السعر المرجعي هو سعر المستودع الأول، وإن لم يوجد فيه سجل نعرض أول سعر موجب دون تغييره.
+    var firstWarehouseRow=g.rows.find(function(r){return Number(r.dep)===1;});
+    g.price=firstWarehouseRow?Math.max(0,Number(firstWarehouseRow.price)||0):(g.prices.length?g.prices[0]:0);
     g.priceConflict=distinct.length>1;
     g.deps=Array.from(g.deps,function(e){return {dep:e[0],qty:e[1]};});
     return g;
@@ -10996,6 +11031,12 @@ function _setUnifiedProductPrice(key,value){
   var price=Number(value);if(!Number.isFinite(price)||price<0){showToast(currentLang==='ar'?'أدخل سعراً صحيحاً':'Geçerli bir fiyat girin','err');return;}
   g.rows.forEach(function(x){var old=Number(x.price)||0;if(old===price)return;x.price=price;addAudit(ACT.PRICE,x.name,x.pkg,x.dep,null,null,old,price,'User',currentLang==='ar'?'توحيد السعر على جميع المستودعات':'Tüm depolarda fiyat birleştirildi');});
   saveAll();filterPrices();
+}
+// أي تعديل سعر من شاشة مستودع ينعكس على جميع سجلات الاسم والعبوة نفسيهما.
+function _setPriceForItemEverywhere(item,newPrice,oldPrice){
+  if(!item)return;
+  var key=priceListGroupKey(item);
+  _setUnifiedProductPrice(key,newPrice);
 }
 function toggleUnpricedPrices(){_showUnpricedPrices=!_showUnpricedPrices;const b=document.getElementById('btn-unpriced');if(b){b.classList.toggle('ba',_showUnpricedPrices);b.textContent=_showUnpricedPrices?(currentLang==='ar'?'💰 عرض كل الأدوية':'💰 Tüm İlaçlar'):(T('noPriceFilter')||'أدوية بلا سعر');}filterPrices();}
 function filterPrices(){
@@ -11023,15 +11064,19 @@ function closeBulkModal(){document.getElementById('bulkModal').classList.add('hi
 function applyBulkEdit(){
   const dep=parseInt(document.getElementById('bulk-dep').value)||0,type=document.getElementById('bulk-type').value;
   const val=parseFloat(document.getElementById('bulk-val').value)||0;
-  const targets=dep?db.filter(x=>x.dep===dep):db;
-  targets.forEach(x=>{const old=x.price;
-    if(type==='pct-up')x.price=Math.round(x.price*(1+val/100)*100)/100;
-    else if(type==='pct-dn')x.price=Math.max(0,Math.round(x.price*(1-val/100)*100)/100);
-    else if(type==='fixed')x.price=val;
-    else if(type==='add')x.price=Math.round((x.price+val)*100)/100;
-    if(x.price!==old)addAudit(ACT.BULK,x.name,x.pkg,x.dep,null,null,old,x.price,'Bulk',`${type}:${val}`);
+  const selected=dep?db.filter(x=>x.dep===dep):db;
+  const keys=new Set(selected.map(priceListGroupKey));
+  var updated=0;
+  keys.forEach(function(key){
+    var g=_buildUnifiedPriceGroups().find(function(z){return z.key===key;});if(!g||!g.rows.length)return;
+    var base=g.price,price=base;
+    if(type==='pct-up')price=Math.round(base*(1+val/100)*100)/100;
+    else if(type==='pct-dn')price=Math.max(0,Math.round(base*(1-val/100)*100)/100);
+    else if(type==='fixed')price=val;
+    else if(type==='add')price=Math.round((base+val)*100)/100;
+    g.rows.forEach(function(x){var old=Number(x.price)||0;if(old===price)return;x.price=price;updated++;addAudit(ACT.BULK,x.name,x.pkg,x.dep,null,null,old,price,'Bulk',`${type}:${val} — ${currentLang==='ar'?'تطبيق على جميع المستودعات':'tüm depolara uygulandı'}`);});
   });
-  closeBulkModal();renderPrices();saveAll();showToast(`✅ ${targets.length}`);
+  closeBulkModal();renderPrices();saveAll();showToast(`✅ ${updated}`);
 }
 
 let currentRptTab='stock';
@@ -11599,13 +11644,14 @@ function _getCombinedStockGroups(){
   const map=new Map();
   db.forEach(x=>{
     const key=priceListGroupKey(x);
-    if(!map.has(key)) map.set(key,{name:x.name,pkg:x.pkg,price:x.price||0,byDep:{},total:0});
-    const g=map.get(key);
-    g.byDep[x.dep]=(g.byDep[x.dep]||0)+(Number(x.qty)||0);
-    g.total+=(Number(x.qty)||0);
-    if(Number(x.price)>0&&(!g.price||Number(x.price)<g.price)) g.price=Number(x.price);
+    if(!map.has(key)) map.set(key,{name:x.name,pkg:x.pkg,price:0,priceConflict:false,prices:new Set(),byDep:{},total:0,valueTotal:0});
+    const g=map.get(key),qty=Number(x.qty)||0,price=Number(x.price)||0;
+    g.byDep[x.dep]=(g.byDep[x.dep]||0)+qty;
+    g.total+=qty;
+    g.valueTotal+=qty*price;
+    if(price>0)g.prices.add(price);
   });
-  return [...map.values()].filter(g=>g.total>0).sort(alphaInventoryGroupCompare);
+  return [...map.values()].map(g=>{g.priceConflict=g.prices.size>1;g.price=g.prices.size===1?[...g.prices][0]:0;delete g.prices;return g;}).filter(g=>g.total>0).sort(alphaInventoryGroupCompare);
 }
 // قائمة الأدوية المنتهية (qty=0) عبر كل المستودعات — مبنية حيّاً من المخزون الحالي،
 // فتختفي تلقائياً بمجرد إضافة كمية جديدة لأي صنف منها (لا حاجة لأي تحديث يدوي).
@@ -11622,7 +11668,7 @@ function exportCombinedStockExcel(){
     if(sp) headers.push(isAr?'السعر':'Fiyat');
     const rows=groups.map((g,i)=>{
       const row=[i+1,g.name,g.pkg,...warehouses.map(w=>g.byDep[w.id]||0),g.total];
-      if(sp) row.push(g.price);
+      if(sp) row.push(g.priceConflict?(isAr?'متعدد':'Çoklu'):(g.price||'—'));
       return row;
     });
     const wb2=makeWb(headers,rows,isAr?'الكل مجتمعاً':'Tümü Birlikte');
@@ -11865,7 +11911,7 @@ function _buildCombinedPDFHTML(title){
 
   const whCols=warehouses.map((w,idx)=>({w,pal:palette[idx%palette.length]}));
   const grandTotal=groups.reduce((s,g)=>s+g.total,0);
-  const grandVal=groups.reduce((s,g)=>s+g.total*(g.price||0),0);
+  const grandVal=groups.reduce((s,g)=>s+g.valueTotal,0);
   const whTotals=warehouses.map(w=>groups.reduce((s,g)=>s+(g.byDep[w.id]||0),0));
 
   const rows=groups.map((g,i)=>{
@@ -11875,8 +11921,8 @@ function _buildCombinedPDFHTML(title){
       if(!q) return `<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:#cbd5e1">—</td>`;
       return `<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${pal.bg}"><span style="color:${pal.text};font-weight:700">${q.toLocaleString()}</span></td>`;
     }).join('');
-    const priceCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt}">${g.price>0?g.price.toFixed(2)+' ₺':'—'}</td>`:'';
-    const valCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-weight:600;color:#1F4E79">${g.price>0?(g.total*g.price).toFixed(2)+' ₺':'—'}</td>`:'';
+    const priceCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:${g.priceConflict?'#B45309':'inherit'}">${g.priceConflict?(isAr?'متعدد':'Çoklu'):(g.price>0?g.price.toFixed(2)+' ₺':'—')}</td>`:'';
+    const valCell=sp?`<td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};font-weight:600;color:#1F4E79">${g.valueTotal.toFixed(2)} ₺</td>`:'';
     return `<tr>
       <td style="text-align:center;padding:6px 8px;border:1px solid #e2e8f0;background:${alt};color:#94a3b8;font-size:10px">${i+1}</td>
       <td style="padding:6px 10px;border:1px solid #e2e8f0;background:${alt};font-weight:600;font-size:11px">${h(g.name)}</td>
